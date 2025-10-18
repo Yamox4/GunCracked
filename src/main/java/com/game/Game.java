@@ -12,6 +12,7 @@ public class Game {
     private Camera camera;
     private Cube cube;
     private Ground ground;
+    private ParticleSystem particleSystem;
     private Matrix4f projectionMatrix;
 
     private Vector3f cubePosition = new Vector3f(0, 0, 0);
@@ -49,8 +50,14 @@ public class Game {
     private final float baseFov = 60.0f; // Base field of view in degrees
     private final float maxFovIncrease = 10.0f; // Maximum FOV increase when moving
     private float currentFov = 60.0f; // Current FOV value
-    private final float fovZoomInSpeed = 15.0f; // Fast zoom when starting to move (sudden movement)
-    private final float fovZoomOutSpeed = 20.0f; // Even faster zoom back when stopping
+    private final float fovZoomInSpeed = 100.0f; // Almost instant zoom when starting to move
+    private final float fovZoomOutSpeed = 120.0f; // Almost instant zoom back when stopping
+
+    // Enhanced Tron/Cyberpunk visual effects
+    private float glowTime = 0.0f; // For animated glow effects
+    private float lightningTime = 0.0f; // For lightning/energy effects
+    private float pulseTime = 0.0f; // For pulsing energy
+    private boolean isCurrentlyMoving = false; // Track movement state for rendering
 
     public Game(long window) {
         this.window = window;
@@ -61,6 +68,7 @@ public class Game {
         camera = new Camera();
         cube = new Cube();
         ground = new Ground();
+        particleSystem = new ParticleSystem();
 
         // Initialize with base FOV - will be updated dynamically
         updateProjectionMatrix();
@@ -157,6 +165,11 @@ public class Game {
         // Update hover animation (always active for continuous bobbing)
         hoverTime += deltaTime * 2.0f; // Speed of hover animation
 
+        // Update tron visual effect timers
+        glowTime += deltaTime * 3.0f; // Glow animation speed
+        lightningTime += deltaTime * 8.0f; // Fast lightning effects
+        pulseTime += deltaTime * 4.0f; // Energy pulse speed
+
         // Calculate movement directions based on camera yaw (horizontal rotation only)
         float yawRad = (float) Math.toRadians(cameraYaw);
 
@@ -214,6 +227,7 @@ public class Game {
 
         // Calculate hover offset based on movement (enhanced bobbing when moving)
         boolean isMoving = movement.length() > 0;
+        isCurrentlyMoving = isMoving; // Store for rendering
         if (isMoving) {
             // Enhanced bobbing when moving - faster and more pronounced
             hoverOffset = (float) Math.sin(hoverTime * 1.5f) * 0.15f; // More pronounced bobbing
@@ -279,6 +293,10 @@ public class Game {
             isGrounded = true; // Player is on ground when not jumping
         }
 
+        // Update particle system
+        particleSystem.emitLightningParticles(cubePosition, isMoving, isJumping);
+        particleSystem.update(deltaTime);
+
         // Update camera to follow cube
         updateCameraPosition();
 
@@ -310,35 +328,92 @@ public class Game {
         shader.setUniform("isWireframe", true);
         ground.render();
 
-        // Render hovering player cube with tron-style effects
-        // First render a slightly larger, dimmer "glow" effect
+        // CLEAN TRON CUBE RENDERING - CONSISTENT COLORS AND SIZES
+        // Layer 1: Outer purple energy field (movement-reactive only)
+        if (isCurrentlyMoving || isJumping) {
+            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.4f);
+            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+            shader.setUniform("mvpMatrix", mvpMatrix);
+            shader.setUniform("modelMatrix", modelMatrix);
+            shader.setUniform("color", new Vector3f(0.4f, 0.1f, 0.6f)); // Consistent deep purple
+            shader.setUniform("isWireframe", false);
+            cube.renderSolid();
+        }
+
+        // Layer 2: Middle purple glow (movement only)
+        if (isCurrentlyMoving) {
+            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.25f);
+            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+            shader.setUniform("mvpMatrix", mvpMatrix);
+            shader.setUniform("modelMatrix", modelMatrix);
+            shader.setUniform("color", new Vector3f(0.6f, 0.2f, 0.8f)); // Consistent bright purple
+            shader.setUniform("isWireframe", false);
+            cube.renderSolid();
+        }
+
+        // Layer 3: Inner glow (consistent size)
         modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.1f);
         mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.2f, 0.6f, 1.0f)); // Dim blue glow
+        shader.setUniform("color", new Vector3f(0.3f, 0.8f, 1.0f)); // Consistent cyan glow
         shader.setUniform("isWireframe", false);
         cube.renderSolid();
 
-        // Render main cube (solid with lighting)
+        // Layer 4: Core cube (solid, consistent)
         modelMatrix = new Matrix4f().identity().translate(cubePosition);
         mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.3f, 0.8f, 1.0f)); // Bright cyan/blue
+        shader.setUniform("color", new Vector3f(0.5f, 0.9f, 1.0f)); // Consistent bright core
         shader.setUniform("isWireframe", false);
         cube.renderSolid();
 
-        // Render cube wireframe overlay for tron aesthetic
-        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f)); // White wireframe
+        // Layer 5: Primary wireframe (consistent white edges)
+        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f)); // Consistent white edges
         shader.setUniform("isWireframe", true);
         cube.renderWireframe();
+
+        // Layer 6: Secondary wireframe (consistent size and color)
+        modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.05f);
+        mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+        shader.setUniform("mvpMatrix", mvpMatrix);
+        shader.setUniform("modelMatrix", modelMatrix);
+        shader.setUniform("color", new Vector3f(0.4f, 0.8f, 1.0f)); // Consistent cyan edges
+        shader.setUniform("isWireframe", true);
+        cube.renderWireframe();
+
+        // Layer 7: Purple energy wireframe (movement-reactive, consistent)
+        if (isCurrentlyMoving) {
+            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.15f);
+            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+            shader.setUniform("mvpMatrix", mvpMatrix);
+            shader.setUniform("modelMatrix", modelMatrix);
+            shader.setUniform("color", new Vector3f(0.7f, 0.3f, 0.9f)); // Consistent purple energy
+            shader.setUniform("isWireframe", true);
+            cube.renderWireframe();
+        }
+
+        // Layer 8: Electric purple wireframe (jumping/moving, consistent)
+        if (isJumping || isCurrentlyMoving) {
+            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.3f);
+            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+            shader.setUniform("mvpMatrix", mvpMatrix);
+            shader.setUniform("modelMatrix", modelMatrix);
+            shader.setUniform("color", new Vector3f(0.9f, 0.5f, 1.0f)); // Consistent electric purple
+            shader.setUniform("isWireframe", true);
+            cube.renderWireframe();
+        }
+
+        // Render lightning particle effects
+        particleSystem.render(shader, viewMatrix, projectionMatrix);
     }
 
     public void cleanup() {
         shader.cleanup();
         cube.cleanup();
         ground.cleanup();
+        particleSystem.cleanup();
 
         // Free callbacks
         if (cursorPosCallback != null) {
