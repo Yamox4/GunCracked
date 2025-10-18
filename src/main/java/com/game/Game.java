@@ -23,12 +23,12 @@ public class Game {
     private double lastY = 384.0;
     private GLFWCursorPosCallback cursorPosCallback;
 
-    // Camera follow settings
-    private float cameraDistance = 8.0f;
-    private float cameraHeight = 4.0f;
+    // Camera follow settings - IMPROVED VALUES
+    private float cameraDistance = 10.0f;
+    private float cameraHeight = 2.0f;
     private float cameraYaw = 0.0f;
-    private float cameraPitch = -20.0f;
-    private float mouseSensitivity = 0.3f;
+    private float cameraPitch = 20.0f;  // Start looking down slightly
+    private float mouseSensitivity = 0.15f; // Reduced for smoother control
 
     public Game(long window) {
         this.window = window;
@@ -69,16 +69,16 @@ public class Game {
                 lastX = xpos;
                 lastY = ypos;
 
-                // Update camera rotation around cube
-                cameraYaw += (float) xOffset * mouseSensitivity;
-                cameraPitch += (float) yOffset * mouseSensitivity;
+                // Update camera rotation around cube - FIXED AXES
+                cameraYaw -= (float) xOffset * mouseSensitivity;   // Negative for correct left/right
+                cameraPitch -= (float) yOffset * mouseSensitivity; // Negative for correct up/down
 
-                // Constrain pitch
-                if (cameraPitch > 45.0f) {
-                    cameraPitch = 45.0f;
+                // Constrain pitch to prevent flipping
+                if (cameraPitch > 80.0f) {
+                    cameraPitch = 80.0f;
                 }
-                if (cameraPitch < -60.0f) {
-                    cameraPitch = -60.0f;
+                if (cameraPitch < -80.0f) {
+                    cameraPitch = -80.0f;
                 }
 
                 updateCameraPosition();
@@ -88,58 +88,65 @@ public class Game {
     }
 
     private void updateCameraPosition() {
-        // Calculate camera position based on cube position and rotation
+        // Calculate camera position using spherical coordinates - FIXED IMPLEMENTATION
         float yawRad = (float) Math.toRadians(cameraYaw);
         float pitchRad = (float) Math.toRadians(cameraPitch);
 
-        Vector3f cameraPos = new Vector3f();
-        cameraPos.x = cubePosition.x + cameraDistance * (float) Math.cos(pitchRad) * (float) Math.cos(yawRad);
-        cameraPos.y = cubePosition.y + cameraHeight + cameraDistance * (float) Math.sin(pitchRad);
-        cameraPos.z = cubePosition.z + cameraDistance * (float) Math.cos(pitchRad) * (float) Math.sin(yawRad);
+        // Calculate offset from cube position
+        Vector3f offset = new Vector3f();
+        offset.x = cameraDistance * (float) Math.cos(pitchRad) * (float) Math.sin(yawRad);
+        offset.y = cameraDistance * (float) Math.sin(pitchRad);
+        offset.z = cameraDistance * (float) Math.cos(pitchRad) * (float) Math.cos(yawRad);
+
+        // Position camera relative to cube
+        Vector3f cameraPos = new Vector3f(cubePosition).add(offset);
+        cameraPos.y += cameraHeight; // Add base height offset
 
         camera.setPosition(cameraPos);
-
-        // Make camera look at cube
-        Vector3f direction = new Vector3f(cubePosition).sub(cameraPos).normalize();
-        Vector3f target = new Vector3f(cameraPos).add(direction);
-        camera.lookAt(target);
+        camera.lookAt(cubePosition); // Always look at the cube
     }
 
     public void update() {
         float deltaTime = 0.016f; // ~60 FPS
 
-        // Calculate camera position to get the viewing direction
-        Vector3f cameraPos = camera.getPosition();
+        // Calculate movement directions based on camera yaw (horizontal rotation only)
+        float yawRad = (float) Math.toRadians(cameraYaw);
         
-        // Calculate the direction from camera to cube (this is our "forward" for movement)
-        Vector3f cameraToTarget = new Vector3f(cubePosition).sub(cameraPos).normalize();
+        // Forward direction (where camera is "looking" horizontally)
+        Vector3f forward = new Vector3f(
+            (float) Math.sin(yawRad),  // X component
+            0.0f,                      // Y component (always 0 for horizontal movement)
+            (float) Math.cos(yawRad)   // Z component
+        );
         
-        // Project forward direction onto horizontal plane (ignore Y component for horizontal movement)
-        Vector3f forward = new Vector3f(cameraToTarget.x, 0, cameraToTarget.z).normalize();
+        // Right direction (perpendicular to forward)
+        Vector3f right = new Vector3f(
+            (float) Math.cos(yawRad),  // X component
+            0.0f,                      // Y component
+            -(float) Math.sin(yawRad)  // Z component
+        );
         
-        // Calculate right vector (perpendicular to forward on horizontal plane)
-        Vector3f right = new Vector3f(forward.z, 0, -forward.x);
         Vector3f up = new Vector3f(0, 1, 0);
 
-        // Cube movement controls (main player) - relative to camera direction
+        // Cube movement controls - FIXED DIRECTIONS
         Vector3f movement = new Vector3f();
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) {
-            movement.add(forward); // Move forward (away from camera)
+            movement.sub(forward); // Move forward (into the screen from camera perspective)
         }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_S) == GLFW.GLFW_PRESS) {
-            movement.sub(forward); // Move backward (toward camera)
+            movement.add(forward); // Move backward (toward camera)
         }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_A) == GLFW.GLFW_PRESS) {
-            movement.sub(right); // Move left relative to camera view
+            movement.sub(right); // Move left
         }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
-            movement.add(right); // Move right relative to camera view
+            movement.add(right); // Move right
         }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) {
-            movement.add(up); // Move up (always world up)
+            movement.add(up); // Move up
         }
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) {
-            movement.sub(up); // Move down (always world down)
+            movement.sub(up); // Move down
         }
 
         // Apply movement to cube
