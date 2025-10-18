@@ -277,13 +277,14 @@ public class UIRenderer {
         shader.setUniform("projectionMatrix", projectionMatrix);
     }
     
-    public void renderDebugConsole(int fps, int enemyCount, float playerHealth, int enemiesKilled, Shader shader, Matrix4f projectionMatrix) {
+    public void renderDebugConsole(int fps, int enemyCount, float playerHealth, int enemiesKilled, int coinsCollected, Shader shader, Matrix4f projectionMatrix) {
         // Setup 2D rendering
         Matrix4f orthoMatrix = new Matrix4f().ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
         shader.setUniform("projectionMatrix", orthoMatrix);
         shader.setUniform("viewMatrix", new Matrix4f().identity());
         
         Vector3f textColor = new Vector3f(0.0f, 1.0f, 1.0f); // Cyan text
+        Vector3f coinColor = new Vector3f(1.0f, 0.9f, 0.3f); // Yellow/gold color for coins
         Vector3f borderColor = new Vector3f(1.0f, 1.0f, 1.0f); // White border
         
         float charSize = 0.04f;
@@ -291,9 +292,9 @@ public class UIRenderer {
         float startX = -0.98f; // Top left corner
         float startY = 0.9f;
         
-        // Debug panel border
+        // Debug panel border (made taller for coins)
         float panelWidth = 0.3f;
-        float panelHeight = 0.25f;
+        float panelHeight = 0.31f;
         renderPanelBorder(startX - 0.01f, startY - panelHeight + 0.01f, panelWidth, panelHeight, shader, borderColor);
         
         // Render debug info
@@ -301,6 +302,7 @@ public class UIRenderer {
         renderDebugLine("ENEMIES", enemyCount, startX, startY - lineHeight, charSize, shader, textColor);
         renderDebugLine("HEALTH", (int)playerHealth, startX, startY - lineHeight * 2, charSize, shader, textColor);
         renderDebugLine("KILLED", enemiesKilled, startX, startY - lineHeight * 3, charSize, shader, textColor);
+        renderDebugLine("COINS", coinsCollected, startX, startY - lineHeight * 4, charSize, shader, coinColor);
         
         // Restore projection matrix
         shader.setUniform("projectionMatrix", projectionMatrix);

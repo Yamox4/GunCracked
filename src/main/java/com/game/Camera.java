@@ -5,6 +5,7 @@ import org.joml.Vector3f;
 
 public class Camera {
     private Vector3f position;
+    private Vector3f basePosition; // Base position without shake
     private Vector3f front;
     private Vector3f up;
     private Vector3f right;
@@ -16,16 +17,27 @@ public class Camera {
     private float movementSpeed = 5.0f;
     private float mouseSensitivity = 0.1f;
     
+    // Camera shake variables
+    private Vector3f shakeOffset;
+    private float shakeIntensity = 0.0f;
+    private float shakeDuration = 0.0f;
+    private float shakeTimer = 0.0f;
+    private java.util.Random shakeRandom;
+    
     public Camera() {
         position = new Vector3f(0, 5, 10);
+        basePosition = new Vector3f(0, 5, 10);
         worldUp = new Vector3f(0, 1, 0);
         front = new Vector3f(0, 0, -1);
         viewMatrix = new Matrix4f();
+        shakeOffset = new Vector3f(0, 0, 0);
+        shakeRandom = new java.util.Random();
         updateCameraVectors();
     }
     
     public void setPosition(Vector3f position) {
-        this.position.set(position);
+        this.basePosition.set(position);
+        this.position.set(position).add(shakeOffset);
         updateViewMatrix();
     }
     
@@ -123,6 +135,42 @@ public class Camera {
     
     public void setMouseSensitivity(float sensitivity) {
         this.mouseSensitivity = sensitivity;
+    }
+    
+    // Camera shake methods
+    public void addShake(float intensity, float duration) {
+        this.shakeIntensity = Math.max(this.shakeIntensity, intensity);
+        this.shakeDuration = Math.max(this.shakeDuration, duration);
+        this.shakeTimer = 0.0f;
+    }
+    
+    public void updateShake(float deltaTime) {
+        if (shakeDuration > 0) {
+            shakeTimer += deltaTime;
+            
+            if (shakeTimer < shakeDuration) {
+                // Calculate shake intensity falloff
+                float progress = shakeTimer / shakeDuration;
+                float currentIntensity = shakeIntensity * (1.0f - progress);
+                
+                // Generate random shake offset
+                shakeOffset.x = (shakeRandom.nextFloat() - 0.5f) * 2.0f * currentIntensity;
+                shakeOffset.y = (shakeRandom.nextFloat() - 0.5f) * 2.0f * currentIntensity;
+                shakeOffset.z = (shakeRandom.nextFloat() - 0.5f) * 2.0f * currentIntensity;
+                
+                // Update position with shake
+                position.set(basePosition).add(shakeOffset);
+                updateViewMatrix();
+            } else {
+                // Shake finished
+                shakeDuration = 0.0f;
+                shakeIntensity = 0.0f;
+                shakeTimer = 0.0f;
+                shakeOffset.set(0, 0, 0);
+                position.set(basePosition);
+                updateViewMatrix();
+            }
+        }
     }
     
     public enum CameraMovement {

@@ -22,7 +22,7 @@ public class EnemyManager {
         this.random = new Random();
         this.sphereRenderer = new Sphere();
         this.spawnTimer = 0.0f;
-        this.spawnInterval = 1.0f; // Spawn every 3 seconds
+        this.spawnInterval = 3.0f; // Spawn every 3 seconds
         this.spawnDistance = 20.0f; // Spawn 20 units away from player
         this.waveNumber = 1;
     }
@@ -55,8 +55,10 @@ public class EnemyManager {
         }
     }
 
-    public int checkBulletCollisions(BulletManager bulletManager, ExplosionSystem explosionSystem) {
+    public CollisionResult checkBulletCollisions(BulletManager bulletManager, ExplosionSystem explosionSystem) {
         int enemiesKilled = 0;
+        int bulletsHit = 0;
+        java.util.List<Vector3f> killPositions = new java.util.ArrayList<>();
 
         for (Bullet bullet : bulletManager.getBullets()) {
             if (!bullet.isActive()) {
@@ -78,10 +80,12 @@ public class EnemyManager {
                     Vector3f explosionPos = new Vector3f(enemyPos); // Store position before enemy dies
                     enemy.takeDamage(1.0f); // 1 damage per bullet
                     bullet.setInactive();
+                    bulletsHit++;
 
                     if (!enemy.isAlive()) {
                         // Create explosion at enemy position
                         explosionSystem.createExplosion(explosionPos);
+                        killPositions.add(new Vector3f(explosionPos));
                         enemiesKilled++;
                     }
                     break; // Bullet can only hit one enemy
@@ -89,7 +93,21 @@ public class EnemyManager {
             }
         }
 
-        return enemiesKilled;
+        return new CollisionResult(enemiesKilled, bulletsHit, killPositions);
+    }
+
+    // Inner class to return collision results
+    public static class CollisionResult {
+
+        public final int enemiesKilled;
+        public final int bulletsHit;
+        public final java.util.List<Vector3f> killPositions;
+
+        public CollisionResult(int enemiesKilled, int bulletsHit, java.util.List<Vector3f> killPositions) {
+            this.enemiesKilled = enemiesKilled;
+            this.bulletsHit = bulletsHit;
+            this.killPositions = killPositions;
+        }
     }
 
     public Vector3f findClosestEnemy(Vector3f playerPosition) {

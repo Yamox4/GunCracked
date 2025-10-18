@@ -16,11 +16,12 @@ public class Game {
     private EnemyManager enemyManager;
     private BulletManager bulletManager;
     private ExplosionSystem explosionSystem;
+    private CoinManager coinManager;
     private UIRenderer uiRenderer;
     private Matrix4f projectionMatrix;
 
     private Vector3f cubePosition = new Vector3f(0, 0, 0);
-    private final float cubeSpeed = 5.0f;
+    private final float cubeSpeed = 7.0f; // Increased movement speed
     private final float hoverHeight = 1.5f; // Fixed hover height above ground
     private float hoverOffset = 0.0f; // For subtle hovering animation
     private float hoverTime = 0.0f;
@@ -104,6 +105,7 @@ public class Game {
         enemyManager = new EnemyManager();
         bulletManager = new BulletManager();
         explosionSystem = new ExplosionSystem();
+        coinManager = new CoinManager();
         uiRenderer = new UIRenderer();
 
         // Initialize with base FOV - will be updated dynamically
@@ -306,6 +308,11 @@ public class Game {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
             movement.add(right); // Move right
         }
+        
+        // Test key to spawn coins for debugging
+        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_C) == GLFW.GLFW_PRESS) {
+            coinManager.spawnTestCoin(cubePosition);
+        }
 
         // Update jump cooldown timer
         if (jumpCooldownTimer > 0) {
@@ -419,15 +426,36 @@ public class Game {
         enemyManager.update(deltaTime, cubePosition);
         
         // Check bullet-enemy collisions and create explosions
-        int killedThisFrame = enemyManager.checkBulletCollisions(bulletManager, explosionSystem);
-        enemiesKilled += killedThisFrame;
+        EnemyManager.CollisionResult collisionResult = enemyManager.checkBulletCollisions(bulletManager, explosionSystem);
+        enemiesKilled += collisionResult.enemiesKilled;
+        
+        // Spawn coins at kill positions
+        for (Vector3f killPos : collisionResult.killPositions) {
+            coinManager.spawnCoin(killPos);
+        }
+        
+        // Add camera shake for bullet impacts
+        if (collisionResult.bulletsHit > 0) {
+            // Light shake for bullet hits
+            camera.addShake(0.15f, 0.1f);
+        }
+        if (collisionResult.enemiesKilled > 0) {
+            // Stronger shake for killing enemies
+            camera.addShake(0.2f, 0.25f);
+        }
         
         // Update explosion system
         explosionSystem.update(deltaTime);
+        
+        // Update coin system
+        coinManager.update(deltaTime, cubePosition, cubeSize);
 
         // Handle collisions
         handleCollisions(deltaTime);
 
+        // Update camera shake
+        camera.updateShake(deltaTime);
+        
         // Update camera to follow cube
         updateCameraPosition();
 
@@ -549,6 +577,9 @@ public class Game {
         
         // Render explosions
         explosionSystem.render(shader, viewMatrix, projectionMatrix);
+        
+        // Render glowing yellow coins
+        coinManager.render(shader, viewMatrix, projectionMatrix, cubePosition, cubeSize);
 
         // Render UI elements
         renderUI();
@@ -565,7 +596,7 @@ public class Game {
         uiRenderer.renderTimer(gameTimer, shader, projectionMatrix);
         
         // Render debug console
-        uiRenderer.renderDebugConsole(currentFps, enemyManager.getEnemyCount(), playerHealth, enemiesKilled, shader, projectionMatrix);
+        uiRenderer.renderDebugConsole(currentFps, enemyManager.getEnemyCount(), playerHealth, enemiesKilled, coinManager.getCoinsCollected(), shader, projectionMatrix);
 
         // Render pause overlay if paused
         if (isPaused) {
@@ -576,6 +607,11 @@ public class Game {
         org.lwjgl.opengl.GL11.glLineWidth(1.0f);
         org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
     }
+    
+    // Getter for coin manager (for level-up system)
+    public CoinManager getCoinManager() {
+        return coinManager;
+    }
 
     public void cleanup() {
         shader.cleanup();
@@ -584,6 +620,7 @@ public class Game {
         particleSystem.cleanup();
         bulletManager.cleanup();
         explosionSystem.cleanup();
+        coinManager.cleanup();
         enemyManager.cleanup();
         uiRenderer.cleanup();
 

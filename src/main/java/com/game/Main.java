@@ -47,11 +47,11 @@ public class Main {
     }
 
     private void loop() {
-        GL11.glClearColor(0.4f, 0.2f, 0.8f, 1.0f); // Purple sky background
+        GL11.glClearColor(0.10f, 0.10f, 0.12f, 1.0f); // Purple sky background
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
-        GL11.glLineWidth(2.0f); // Thicker lines for better visibility
+        GL11.glLineWidth(1.0f); // Thicker lines for better visibility
 
         while (!GLFW.glfwWindowShouldClose(window)) {
             GL11.glClear(GL11.GL_COLOR_BUFFER_BIT | GL11.GL_DEPTH_BUFFER_BIT);
@@ -67,28 +67,28 @@ public class Main {
     private void positionWindowOnSecondMonitor() {
         // Get all available monitors
         org.lwjgl.PointerBuffer monitors = GLFW.glfwGetMonitors();
-        
+
         if (monitors != null && monitors.remaining() > 1) {
             // Get the second monitor (index 1)
             long secondMonitor = monitors.get(1);
-            
+
             // Get the video mode of the second monitor
             org.lwjgl.glfw.GLFWVidMode vidMode = GLFW.glfwGetVideoMode(secondMonitor);
-            
+
             if (vidMode != null) {
                 // Get monitor position
                 int[] monitorX = new int[1];
                 int[] monitorY = new int[1];
                 GLFW.glfwGetMonitorPos(secondMonitor, monitorX, monitorY);
-                
+
                 // Center the window on the second monitor
                 int windowWidth = 1600;
                 int windowHeight = 1028;
                 int posX = monitorX[0] + (vidMode.width() - windowWidth) / 2;
                 int posY = monitorY[0] + (vidMode.height() - windowHeight) / 2;
-                
+
                 GLFW.glfwSetWindowPos(window, posX, posY);
-                
+
                 System.out.println("Window positioned on second monitor at: " + posX + ", " + posY);
                 System.out.println("Second monitor resolution: " + vidMode.width() + "x" + vidMode.height());
             }
@@ -97,13 +97,13 @@ public class Main {
             // Center on primary monitor as fallback
             long primaryMonitor = GLFW.glfwGetPrimaryMonitor();
             org.lwjgl.glfw.GLFWVidMode vidMode = GLFW.glfwGetVideoMode(primaryMonitor);
-            
+
             if (vidMode != null) {
                 int windowWidth = 1600;
                 int windowHeight = 1028;
                 int posX = (vidMode.width() - windowWidth) / 2;
                 int posY = (vidMode.height() - windowHeight) / 2;
-                
+
                 GLFW.glfwSetWindowPos(window, posX, posY);
             }
         }

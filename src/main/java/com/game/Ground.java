@@ -2,7 +2,6 @@ package com.game;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Random;
 
 import org.joml.Matrix4f;
 import org.joml.Vector3f;
@@ -36,7 +35,7 @@ public class Ground {
         float spacing = 2.0f;
         float halfGrid = gridSize * spacing * 0.5f;
         
-        // Create grid lines (black)
+        // Create Tron-style glowing white grid lines
         List<Float> gridVertices = new ArrayList<>();
         
         for (int i = 0; i <= gridSize; i++) {
@@ -81,89 +80,39 @@ public class Ground {
         
         GL30.glBindVertexArray(0);
         
-        // Create square geometry for filled squares
-        float[] squareVertices = {
-            -1.0f, 0.01f, -1.0f,  0.0f, 1.0f, 0.0f, // Slightly above ground
-             1.0f, 0.01f, -1.0f,  0.0f, 1.0f, 0.0f,
-             1.0f, 0.01f,  1.0f,  0.0f, 1.0f, 0.0f,
-            -1.0f, 0.01f,  1.0f,  0.0f, 1.0f, 0.0f
-        };
-        
-        int[] squareIndices = {0, 1, 2, 2, 3, 0};
-        
-        squareVaoId = GL30.glGenVertexArrays();
-        GL30.glBindVertexArray(squareVaoId);
-        
-        squareVboId = GL15.glGenBuffers();
-        GL15.glBindBuffer(GL15.GL_ARRAY_BUFFER, squareVboId);
-        GL15.glBufferData(GL15.GL_ARRAY_BUFFER, squareVertices, GL15.GL_STATIC_DRAW);
-        
-        squareEboId = GL15.glGenBuffers();
-        GL15.glBindBuffer(GL15.GL_ELEMENT_ARRAY_BUFFER, squareEboId);
-        GL15.glBufferData(GL15.GL_ELEMENT_ARRAY_BUFFER, squareIndices, GL15.GL_STATIC_DRAW);
-        
-        GL20.glVertexAttribPointer(0, 3, GL11.GL_FLOAT, false, 6 * Float.BYTES, 0);
-        GL20.glEnableVertexAttribArray(0);
-        GL20.glVertexAttribPointer(1, 3, GL11.GL_FLOAT, false, 6 * Float.BYTES, 3 * Float.BYTES);
-        GL20.glEnableVertexAttribArray(1);
-        
-        GL30.glBindVertexArray(0);
-        
-        // Create all squares filled with white
+        // No filled squares - just wireframe checkerboard
         squares = new ArrayList<>();
-        
-        for (int x = -gridSize/2; x < gridSize/2; x++) {
-            for (int z = -gridSize/2; z < gridSize/2; z++) {
-                float posX = x * spacing;
-                float posZ = z * spacing;
-                
-                // All squares are pure white
-                Vector3f color = new Vector3f(1.0f, 1.0f, 1.0f); // Pure white
-                
-                squares.add(new GridSquare(posX, posZ, color));
-            }
-        }
     }
     
     public void render(Shader shader, Matrix4f viewMatrix, Matrix4f projectionMatrix) {
-        // Render black grid lines
+        // Render glowing white Tron grid lines with multiple layers for glow effect
         GL30.glBindVertexArray(gridVaoId);
         
         Matrix4f modelMatrix = new Matrix4f().identity();
         Matrix4f mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         
+        // Set thicker lines for Tron effect
+        GL11.glLineWidth(3.0f);
+        
+        // Layer 1: Outer glow (thicker, more transparent)
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.0f, 0.0f, 0.0f)); // Black grid lines
+        shader.setUniform("color", new Vector3f(0.8f, 0.9f, 1.0f).mul(0.3f)); // Soft white glow
         shader.setUniform("isWireframe", true);
-        
         GL11.glDrawArrays(GL11.GL_LINES, 0, gridVertexCount);
-        GL30.glBindVertexArray(0);
         
-        // Render filled squares with black outlines
-        GL30.glBindVertexArray(squareVaoId);
+        // Layer 2: Core lines (bright white)
+        GL11.glLineWidth(2.0f);
+        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f).mul(0.9f)); // Bright white core
+        GL11.glDrawArrays(GL11.GL_LINES, 0, gridVertexCount);
         
-        for (GridSquare square : squares) {
-            // Render white filled square
-            Matrix4f squareMatrix = new Matrix4f().identity()
-                .translate(square.x, 0.0f, square.z)
-                .scale(0.9f, 1.0f, 0.9f); // Slightly smaller than grid cell
-            Matrix4f squareMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(squareMatrix);
-            
-            shader.setUniform("mvpMatrix", squareMvp);
-            shader.setUniform("modelMatrix", squareMatrix);
-            shader.setUniform("color", square.color); // Pure white
-            shader.setUniform("isWireframe", false);
-            
-            GL11.glDrawElements(GL11.GL_TRIANGLES, 6, GL11.GL_UNSIGNED_INT, 0);
-            
-            // Render black outline
-            shader.setUniform("color", new Vector3f(0.0f, 0.0f, 0.0f)); // Black outline
-            shader.setUniform("isWireframe", true);
-            
-            GL11.glDrawElements(GL11.GL_TRIANGLES, 6, GL11.GL_UNSIGNED_INT, 0);
-        }
+        // Layer 3: Inner core (brightest)
+        GL11.glLineWidth(1.0f);
+        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f)); // Pure bright white
+        GL11.glDrawArrays(GL11.GL_LINES, 0, gridVertexCount);
         
+        // Reset line width
+        GL11.glLineWidth(1.0f);
         GL30.glBindVertexArray(0);
     }
     
