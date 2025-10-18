@@ -19,7 +19,7 @@ public class Game {
     private final float hoverHeight = 1.5f; // Fixed hover height above ground
     private float hoverOffset = 0.0f; // For subtle hovering animation
     private float hoverTime = 0.0f;
-    
+
     // Jump mechanics
     private boolean isJumping = false;
     private boolean isGrounded = true;
@@ -33,8 +33,8 @@ public class Game {
 
     // Mouse input for camera
     private boolean firstMouse = true;
-    private double lastX = 512.0;
-    private double lastY = 384.0;
+    private double lastX = 800.0;
+    private double lastY = 514.0;
     private GLFWCursorPosCallback cursorPosCallback;
     private org.lwjgl.glfw.GLFWScrollCallback scrollCallback;
 
@@ -44,6 +44,13 @@ public class Game {
     private float cameraYaw = 0.0f;
     private float cameraPitch = 20.0f;  // Start looking down slightly
     private final float mouseSensitivity = 0.15f; // Reduced for smoother control
+
+    // Dynamic FOV for movement feedback
+    private final float baseFov = 60.0f; // Base field of view in degrees
+    private final float maxFovIncrease = 10.0f; // Maximum FOV increase when moving
+    private float currentFov = 60.0f; // Current FOV value
+    private final float fovZoomInSpeed = 15.0f; // Fast zoom when starting to move (sudden movement)
+    private final float fovZoomOutSpeed = 20.0f; // Even faster zoom back when stopping
 
     public Game(long window) {
         this.window = window;
@@ -55,8 +62,8 @@ public class Game {
         cube = new Cube();
         ground = new Ground();
 
-        projectionMatrix = new Matrix4f().perspective(
-                (float) Math.toRadians(60.0f), 1024.0f / 768.0f, 0.1f, 100.0f);
+        // Initialize with base FOV - will be updated dynamically
+        updateProjectionMatrix();
 
         // Setup mouse input for camera control
         setupMouseInput();
@@ -139,6 +146,11 @@ public class Game {
         camera.lookAt(cubePosition); // Always look at the cube
     }
 
+    private void updateProjectionMatrix() {
+        projectionMatrix = new Matrix4f().perspective(
+                (float) Math.toRadians(currentFov), 1600.0f / 1028.0f, 0.1f, 100.0f);
+    }
+
     public void update() {
         float deltaTime = 0.016f; // ~60 FPS
 
@@ -176,15 +188,15 @@ public class Game {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
             movement.add(right); // Move right
         }
-        
+
         // Update jump cooldown timer
         if (jumpCooldownTimer > 0) {
             jumpCooldownTimer -= deltaTime;
         }
-        
+
         // Jump input with cooldown and double jump prevention
         boolean spaceCurrentlyPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
-        
+
         // Only jump if:
         // 1. Space key was just pressed (not held)
         // 2. Player is grounded (not in air)
@@ -196,7 +208,7 @@ public class Game {
             jumpVelocity = jumpStrength;
             jumpCooldownTimer = jumpCooldown; // Start cooldown
         }
-        
+
         // Update space key state for next frame
         spaceKeyPressed = spaceCurrentlyPressed;
 
@@ -209,7 +221,29 @@ public class Game {
             // Subtle bobbing when stationary
             hoverOffset = (float) Math.sin(hoverTime) * 0.08f; // Gentle bobbing
         }
-        
+
+        // Dynamic FOV based on movement for speed sensation
+        float targetFov = isMoving ? baseFov + maxFovIncrease : baseFov;
+
+        // Smoothly transition FOV with different speeds for zoom in/out
+        if (Math.abs(currentFov - targetFov) > 0.1f) {
+            if (currentFov < targetFov) {
+                // Zooming in (starting to move) - fast for sudden movement feel
+                currentFov += fovZoomInSpeed * deltaTime;
+                if (currentFov > targetFov) {
+                    currentFov = targetFov;
+                }
+            } else {
+                // Zooming out (stopping) - even faster to avoid weird lingering effect
+                currentFov -= fovZoomOutSpeed * deltaTime;
+                if (currentFov < targetFov) {
+                    currentFov = targetFov;
+                }
+            }
+            // Update projection matrix with new FOV
+            updateProjectionMatrix();
+        }
+
         // Apply horizontal movement
         if (isMoving) {
             movement.normalize().mul(cubeSpeed * deltaTime);
@@ -217,15 +251,15 @@ public class Game {
             cubePosition.x += movement.x;
             cubePosition.z += movement.z;
         }
-        
+
         // Handle jump physics
         if (isJumping) {
             // Apply jump velocity to Y position
             cubePosition.y += jumpVelocity * deltaTime;
-            
+
             // Apply gravity to reduce jump velocity
             jumpVelocity -= gravity * deltaTime;
-            
+
             // Check if landed back at hover height
             if (cubePosition.y <= hoverHeight + hoverOffset) {
                 cubePosition.y = hoverHeight + hoverOffset;
@@ -233,7 +267,7 @@ public class Game {
                 isGrounded = true; // Player has landed
                 jumpVelocity = 0.0f;
             }
-            
+
             // Prevent jumping too high
             if (cubePosition.y > hoverHeight + maxJumpHeight) {
                 cubePosition.y = hoverHeight + maxJumpHeight;
@@ -244,7 +278,7 @@ public class Game {
             cubePosition.y = hoverHeight + hoverOffset;
             isGrounded = true; // Player is on ground when not jumping
         }
-        
+
         // Update camera to follow cube
         updateCameraPosition();
 
