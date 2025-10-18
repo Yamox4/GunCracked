@@ -253,22 +253,18 @@ public class UIRenderer {
         float charSize = 0.06f; // Slightly bigger for better readability
         float spacing = 0.07f;  // Better spacing
         
-        // Timer background panel
+        // Timer outline panel (no background, just border)
         float panelWidth = spacing * 4.5f + 0.04f;
         float panelHeight = charSize + 0.02f;
         float panelX = startX - 0.01f;
         float panelY = startY - 0.01f;
         
-        // Render dark background
-        Vector3f bgColor = new Vector3f(0.0f, 0.0f, 0.0f); // Black background
-        renderPanel(panelX, panelY, panelWidth, panelHeight, shader, bgColor, false);
-        
-        // Render border
-        Vector3f borderColor = new Vector3f(0.0f, 1.0f, 1.0f); // Cyan border
+        // Render only white outline border (no background)
+        Vector3f borderColor = new Vector3f(1.0f, 1.0f, 1.0f); // Pure white border
         renderPanelBorder(panelX, panelY, panelWidth, panelHeight, shader, borderColor);
         
-        // Timer text color
-        Vector3f timerColor = new Vector3f(1.0f, 1.0f, 1.0f); // White text
+        // Timer text color - pure white
+        Vector3f timerColor = new Vector3f(1.0f, 1.0f, 1.0f); // Pure white text
         
         // Render digits with better spacing
         renderCharacter(minutes / 10, startX, startY, charSize, shader, timerColor);

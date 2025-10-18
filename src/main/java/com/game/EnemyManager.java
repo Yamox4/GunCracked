@@ -21,7 +21,7 @@ public class EnemyManager {
         this.random = new Random();
         this.sphereRenderer = new Sphere();
         this.spawnTimer = 0.0f;
-        this.spawnInterval = 3.0f; // Spawn every 3 seconds
+        this.spawnInterval = 1.0f; // Spawn every 3 seconds
         this.spawnDistance = 20.0f; // Spawn 20 units away from player
         this.waveNumber = 1;
     }

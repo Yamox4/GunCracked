@@ -158,7 +158,7 @@ public class Game {
                 cameraDistance -= (float) yoffset * zoomSpeed;
 
                 // Constrain zoom limits
-                cameraDistance = Math.max(3.0f, Math.min(15.0f, cameraDistance));
+                cameraDistance = Math.max(3.0f, Math.min(50.0f, cameraDistance));
 
                 updateCameraPosition();
             }
@@ -187,7 +187,7 @@ public class Game {
 
     private void updateProjectionMatrix() {
         projectionMatrix = new Matrix4f().perspective(
-                (float) Math.toRadians(currentFov), 1600.0f / 1028.0f, 0.1f, 100.0f);
+                (float) Math.toRadians(currentFov), 1600.0f / 1028.0f, 0.1f, 1000.0f);
     }
 
     private void handleCollisions(float deltaTime) {

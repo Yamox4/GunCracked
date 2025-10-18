@@ -19,7 +19,7 @@ public class ParticleSystem {
     private int vaoId;
     private int vboId;
     private int eboId;
-    private final int maxParticles = 200;
+    private final int maxParticles = 50;
 
     private static class Particle {
 
@@ -46,9 +46,8 @@ public class ParticleSystem {
             // Update life
             life -= deltaTime;
 
-            // Fade out over time
-            float alpha = life / maxLife;
-            color.mul(alpha);
+            // Keep colors bright - don't fade color, just use alpha for transparency
+            // (Note: We'll handle fading in the render method instead)
 
             // Gravity effect for some particles
             velocity.y -= 2.0f * deltaTime;
@@ -146,28 +145,14 @@ public class ParticleSystem {
                     (random.nextFloat() - 0.5f) * 8.0f
             );
 
-            // Purple lightning colors
-            Vector3f color;
-            if (isJumping) {
-                // Bright electric purple-white for jumping
-                color = new Vector3f(
-                        0.8f + random.nextFloat() * 0.2f,
-                        0.4f + random.nextFloat() * 0.3f,
-                        1.0f
-                );
-            } else {
-                // Deep purple for movement
-                color = new Vector3f(
-                        0.6f + random.nextFloat() * 0.2f,
-                        0.2f + random.nextFloat() * 0.2f,
-                        0.8f + random.nextFloat() * 0.2f
-                );
-            }
-
             float lifetime = 0.5f + random.nextFloat() * 0.8f;
-            float size = 0.05f + random.nextFloat() * 0.1f;
+            float size = 0.15f + random.nextFloat() * 0.2f; // Much larger particles
 
-            particles.add(new Particle(pos, vel, color, lifetime, size));
+            // Store shimmer value in the color for later use
+            float shimmer = isJumping ? (0.9f + random.nextFloat() * 0.1f) : (0.85f + random.nextFloat() * 0.15f);
+            Vector3f particleColor = new Vector3f(shimmer, shimmer, shimmer); // Store shimmer info
+
+            particles.add(new Particle(pos, vel, particleColor, lifetime, size));
         }
     }
     
@@ -201,17 +186,14 @@ public class ParticleSystem {
                 (random.nextFloat() - 0.5f) * 2.0f
             );
             
-            // Yellow/orange trail colors to match cube
-            Vector3f color = new Vector3f(
-                1.0f, // Red
-                0.8f + random.nextFloat() * 0.2f, // Green (yellow to orange)
-                0.2f + random.nextFloat() * 0.3f  // Blue (slight orange tint)
-            );
-            
             float lifetime = 0.3f + random.nextFloat() * 0.4f; // Shorter lifetime for trails
-            float size = 0.03f + random.nextFloat() * 0.05f; // Smaller trail particles
+            float size = 0.12f + random.nextFloat() * 0.15f; // Larger trail particles
             
-            particles.add(new Particle(trailPos, vel, color, lifetime, size));
+            // Store shimmer value for trail particles
+            float shimmer = 0.8f + random.nextFloat() * 0.2f;
+            Vector3f trailColor = new Vector3f(shimmer, shimmer * 0.9f, shimmer * 0.7f); // Trail shimmer info
+            
+            particles.add(new Particle(trailPos, vel, trailColor, lifetime, size));
         }
     }
 
@@ -234,17 +216,53 @@ public class ParticleSystem {
         GL30.glBindVertexArray(vaoId);
 
         for (Particle particle : particles) {
-            // Create model matrix for particle position and size
-            Matrix4f modelMatrix = new Matrix4f().identity()
+            // Calculate life ratio for fading (but keep colors bright)
+            float lifeRatio = particle.life / particle.maxLife;
+            
+            // Use particle's shimmer values for white-gold color
+            float shimmer = particle.color.x; // Shimmer stored in red component
+            
+            // Render glowing effect with multiple layers - all bright white-gold
+            
+            // Layer 1: Outer glow (largest, most transparent)
+            Matrix4f modelMatrix1 = new Matrix4f().identity()
                 .translate(particle.position)
-                .scale(particle.size * 10.0f); // Scale up the tiny cube based on particle size
-            Matrix4f mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-
-            shader.setUniform("mvpMatrix", mvpMatrix);
-            shader.setUniform("modelMatrix", modelMatrix);
-            shader.setUniform("color", particle.color);
+                .scale(particle.size * 15.0f); // Larger outer glow
+            Matrix4f mvpMatrix1 = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix1);
+            
+            Vector3f glowColor1 = new Vector3f(1.0f * shimmer, 0.92f * shimmer, 0.68f * shimmer).mul(0.8f * lifeRatio);
+            shader.setUniform("mvpMatrix", mvpMatrix1);
+            shader.setUniform("modelMatrix", modelMatrix1);
+            shader.setUniform("color", glowColor1);
             shader.setUniform("isWireframe", false);
-
+            GL11.glDrawElements(GL11.GL_TRIANGLES, 36, GL11.GL_UNSIGNED_INT, 0);
+            
+            // Layer 2: Middle glow
+            Matrix4f modelMatrix2 = new Matrix4f().identity()
+                .translate(particle.position)
+                .scale(particle.size * 12.0f); // Medium glow
+            Matrix4f mvpMatrix2 = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix2);
+            
+            Vector3f glowColor2 = new Vector3f(1.0f * shimmer, 0.94f * shimmer, 0.75f * shimmer).mul(1.2f * lifeRatio);
+            shader.setUniform("mvpMatrix", mvpMatrix2);
+            shader.setUniform("modelMatrix", modelMatrix2);
+            shader.setUniform("color", glowColor2);
+            shader.setUniform("isWireframe", false);
+            GL11.glDrawElements(GL11.GL_TRIANGLES, 36, GL11.GL_UNSIGNED_INT, 0);
+            
+            // Layer 3: Core particle (brightest)
+            Matrix4f modelMatrix3 = new Matrix4f().identity()
+                .translate(particle.position)
+                .scale(particle.size * 8.0f); // Core size
+            Matrix4f mvpMatrix3 = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix3);
+            
+            // Pure bright white-gold core
+            Vector3f coreColor = new Vector3f(1.0f * shimmer, 0.96f * shimmer, 0.82f * shimmer).mul(1.5f * lifeRatio);
+            
+            shader.setUniform("mvpMatrix", mvpMatrix3);
+            shader.setUniform("modelMatrix", modelMatrix3);
+            shader.setUniform("color", coreColor);
+            shader.setUniform("isWireframe", false);
             GL11.glDrawElements(GL11.GL_TRIANGLES, 36, GL11.GL_UNSIGNED_INT, 0);
         }
 
