@@ -217,9 +217,6 @@ public class Game {
             playerHealth -= 1.0f; // 1 damage per hit
             damageTimer = damageInterval; // Reset damage timer
 
-            // Visual feedback - extra particle burst when hit
-            particleSystem.emitLightningParticles(cubePosition, true, true);
-
             // Check if player is dead
             if (playerHealth <= 0) {
                 playerHealth = 0;
@@ -412,12 +409,7 @@ public class Game {
             isGrounded = true; // Player is on ground when not jumping
         }
 
-        // Update particle system - always emit particles, with trail when moving
-        particleSystem.emitLightningParticles(cubePosition, true, isJumping); // Always emit
-        if (isMoving) {
-            // Add trail particles when moving
-            particleSystem.emitTrailParticles(cubePosition, movement, cubeSpeed);
-        }
+        // Update particle system (keeping system active but not applying to cube)
         particleSystem.update(deltaTime);
 
         // Update bullet system
@@ -547,8 +539,7 @@ public class Game {
         cube.renderWireframe();
         org.lwjgl.opengl.GL11.glLineWidth(1.0f); // Reset line width
 
-        // Render lightning particle effects
-        particleSystem.render(shader, viewMatrix, projectionMatrix);
+        // Particle system render removed from cube (system still available for other uses)
         
         // Render bullets
         bulletManager.render(shader, viewMatrix, projectionMatrix);

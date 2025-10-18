@@ -33,6 +33,9 @@ public class Main {
             throw new RuntimeException("Failed to create the GLFW window");
         }
 
+        // Position window on second monitor if available
+        positionWindowOnSecondMonitor();
+
         GLFW.glfwMakeContextCurrent(window);
         GLFW.glfwSwapInterval(1);
         GLFW.glfwShowWindow(window);
@@ -44,7 +47,7 @@ public class Main {
     }
 
     private void loop() {
-        GL11.glClearColor(0.0f, 0.0f, 0.1f, 1.0f); // Dark blue background
+        GL11.glClearColor(0.4f, 0.2f, 0.8f, 1.0f); // Purple sky background
         GL11.glEnable(GL11.GL_DEPTH_TEST);
         GL11.glEnable(GL11.GL_BLEND);
         GL11.glBlendFunc(GL11.GL_SRC_ALPHA, GL11.GL_ONE_MINUS_SRC_ALPHA);
@@ -58,6 +61,51 @@ public class Main {
 
             GLFW.glfwSwapBuffers(window);
             GLFW.glfwPollEvents();
+        }
+    }
+
+    private void positionWindowOnSecondMonitor() {
+        // Get all available monitors
+        org.lwjgl.PointerBuffer monitors = GLFW.glfwGetMonitors();
+        
+        if (monitors != null && monitors.remaining() > 1) {
+            // Get the second monitor (index 1)
+            long secondMonitor = monitors.get(1);
+            
+            // Get the video mode of the second monitor
+            org.lwjgl.glfw.GLFWVidMode vidMode = GLFW.glfwGetVideoMode(secondMonitor);
+            
+            if (vidMode != null) {
+                // Get monitor position
+                int[] monitorX = new int[1];
+                int[] monitorY = new int[1];
+                GLFW.glfwGetMonitorPos(secondMonitor, monitorX, monitorY);
+                
+                // Center the window on the second monitor
+                int windowWidth = 1600;
+                int windowHeight = 1028;
+                int posX = monitorX[0] + (vidMode.width() - windowWidth) / 2;
+                int posY = monitorY[0] + (vidMode.height() - windowHeight) / 2;
+                
+                GLFW.glfwSetWindowPos(window, posX, posY);
+                
+                System.out.println("Window positioned on second monitor at: " + posX + ", " + posY);
+                System.out.println("Second monitor resolution: " + vidMode.width() + "x" + vidMode.height());
+            }
+        } else {
+            System.out.println("Second monitor not found. Using primary monitor.");
+            // Center on primary monitor as fallback
+            long primaryMonitor = GLFW.glfwGetPrimaryMonitor();
+            org.lwjgl.glfw.GLFWVidMode vidMode = GLFW.glfwGetVideoMode(primaryMonitor);
+            
+            if (vidMode != null) {
+                int windowWidth = 1600;
+                int windowHeight = 1028;
+                int posX = (vidMode.width() - windowWidth) / 2;
+                int posY = (vidMode.height() - windowHeight) / 2;
+                
+                GLFW.glfwSetWindowPos(window, posX, posY);
+            }
         }
     }
 
