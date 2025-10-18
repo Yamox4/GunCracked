@@ -9,7 +9,7 @@ import org.joml.Vector3f;
 public class BulletManager {
     private final List<Bullet> bullets;
     private float shootCooldown;
-    private final float maxShootCooldown = 2.0f; // 0.5 seconds between shots (one at a time)
+    private final float maxShootCooldown = 1.0f; // 0.5 seconds between shots (one at a time)
     
     public BulletManager() {
         bullets = new ArrayList<>();
