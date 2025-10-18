@@ -13,6 +13,7 @@ public class Game {
     private Cube cube;
     private Ground ground;
     private ParticleSystem particleSystem;
+    private EnemyManager enemyManager;
     private Matrix4f projectionMatrix;
 
     private Vector3f cubePosition = new Vector3f(0, 0, 0);
@@ -69,6 +70,7 @@ public class Game {
         cube = new Cube();
         ground = new Ground();
         particleSystem = new ParticleSystem();
+        enemyManager = new EnemyManager();
 
         // Initialize with base FOV - will be updated dynamically
         updateProjectionMatrix();
@@ -297,6 +299,9 @@ public class Game {
         particleSystem.emitLightningParticles(cubePosition, isMoving, isJumping);
         particleSystem.update(deltaTime);
 
+        // Update enemy system
+        enemyManager.update(deltaTime, cubePosition);
+
         // Update camera to follow cube
         updateCameraPosition();
 
@@ -407,6 +412,9 @@ public class Game {
 
         // Render lightning particle effects
         particleSystem.render(shader, viewMatrix, projectionMatrix);
+
+        // Render enemies
+        enemyManager.render(shader, viewMatrix, projectionMatrix);
     }
 
     public void cleanup() {
@@ -414,6 +422,7 @@ public class Game {
         cube.cleanup();
         ground.cleanup();
         particleSystem.cleanup();
+        enemyManager.cleanup();
 
         // Free callbacks
         if (cursorPosCallback != null) {
