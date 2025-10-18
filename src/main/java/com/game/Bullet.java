@@ -20,7 +20,7 @@ public class Bullet {
 
     // Trail system
     private final java.util.List<Vector3f> trailPositions;
-    private final int maxTrailLength = 10;
+    private final int maxTrailLength = 25; // Longer trail
 
     public Bullet(Vector3f startPos, Vector3f targetPos) {
         this.position = new Vector3f(startPos);
@@ -63,59 +63,110 @@ public class Bullet {
             return;
         }
 
-        // Render white trail first (behind bullet) - using small spheres
+        // Render enhanced trail with multiple layers
         for (int i = 0; i < trailPositions.size(); i++) {
             Vector3f trailPos = trailPositions.get(i);
             float trailAlpha = (float) i / trailPositions.size(); // Fade from 0 to 1
-            float trailSize = 0.03f + (trailAlpha * 0.05f); // Small trail spheres
+            float baseSize = 0.02f + (trailAlpha * 0.08f); // Larger trail spheres
 
-            Matrix4f trailMatrix = new Matrix4f().identity()
+            // Layer 1: Outer trail glow (blue-white)
+            Matrix4f trailGlowMatrix = new Matrix4f().identity()
                     .translate(trailPos)
-                    .scale(trailSize);
-            Matrix4f trailMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(trailMatrix);
+                    .scale(baseSize * 2.5f);
+            Matrix4f trailGlowMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(trailGlowMatrix);
 
-            shader.setUniform("mvpMatrix", trailMvp);
-            shader.setUniform("modelMatrix", trailMatrix);
-            shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f).mul(trailAlpha * 0.8f)); // White trail
+            shader.setUniform("mvpMatrix", trailGlowMvp);
+            shader.setUniform("modelMatrix", trailGlowMatrix);
+            shader.setUniform("color", new Vector3f(0.4f, 0.7f, 1.0f).mul(trailAlpha * 0.3f)); // Blue glow
             shader.setUniform("isWireframe", false);
+            sphereRenderer.render();
 
+            // Layer 2: Middle trail (bright white-blue)
+            Matrix4f trailMiddleMatrix = new Matrix4f().identity()
+                    .translate(trailPos)
+                    .scale(baseSize * 1.8f);
+            Matrix4f trailMiddleMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(trailMiddleMatrix);
+
+            shader.setUniform("mvpMatrix", trailMiddleMvp);
+            shader.setUniform("modelMatrix", trailMiddleMatrix);
+            shader.setUniform("color", new Vector3f(0.8f, 0.9f, 1.0f).mul(trailAlpha * 0.6f)); // Bright white-blue
+            shader.setUniform("isWireframe", false);
+            sphereRenderer.render();
+
+            // Layer 3: Core trail (pure white)
+            Matrix4f trailCoreMatrix = new Matrix4f().identity()
+                    .translate(trailPos)
+                    .scale(baseSize);
+            Matrix4f trailCoreMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(trailCoreMatrix);
+
+            shader.setUniform("mvpMatrix", trailCoreMvp);
+            shader.setUniform("modelMatrix", trailCoreMatrix);
+            shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f).mul(trailAlpha * 0.9f)); // Pure white core
+            shader.setUniform("isWireframe", false);
             sphereRenderer.render();
         }
 
-        // Render blue glowing bullet sphere with multiple layers
-        // Layer 1: Outer blue glow (largest sphere)
+        // Render enhanced bullet with dramatic light effects
+        float pulseTime = System.nanoTime() / 1_000_000_000.0f; // Time for pulsing effect
+        float pulse = 0.8f + 0.2f * (float) Math.sin(pulseTime * 15.0f); // Fast pulse
+
+        // Layer 1: Outer energy field (largest, pulsing)
+        Matrix4f energyMatrix = new Matrix4f().identity()
+                .translate(position)
+                .scale(0.4f * pulse); // Pulsing outer energy field
+        Matrix4f energyMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(energyMatrix);
+
+        shader.setUniform("mvpMatrix", energyMvp);
+        shader.setUniform("modelMatrix", energyMatrix);
+        shader.setUniform("color", new Vector3f(0.1f, 0.3f, 1.0f).mul(0.4f * pulse)); // Soft blue energy
+        shader.setUniform("isWireframe", false);
+        sphereRenderer.render();
+
+        // Layer 2: Outer blue glow (large sphere)
         Matrix4f glowMatrix1 = new Matrix4f().identity()
                 .translate(position)
-                .scale(1.0f); // Much larger outer glow sphere
+                .scale(0.25f); // Larger outer glow sphere
         Matrix4f glowMvp1 = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(glowMatrix1);
 
         shader.setUniform("mvpMatrix", glowMvp1);
         shader.setUniform("modelMatrix", glowMatrix1);
-        shader.setUniform("color", new Vector3f(0.2f, 0.4f, 1.0f).mul(1.0f)); // Bright blue glow
+        shader.setUniform("color", new Vector3f(0.2f, 0.5f, 1.0f).mul(0.8f)); // Bright blue glow
         shader.setUniform("isWireframe", false);
         sphereRenderer.render();
 
-        // Layer 2: Middle blue glow sphere
+        // Layer 3: Middle blue glow sphere
         Matrix4f glowMatrix2 = new Matrix4f().identity()
                 .translate(position)
-                .scale(0.7f); // Much larger medium glow sphere
+                .scale(0.18f); // Medium glow sphere
         Matrix4f glowMvp2 = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(glowMatrix2);
 
         shader.setUniform("mvpMatrix", glowMvp2);
         shader.setUniform("modelMatrix", glowMatrix2);
-        shader.setUniform("color", new Vector3f(0.3f, 0.6f, 1.0f).mul(1.2f)); // Very bright blue
+        shader.setUniform("color", new Vector3f(0.4f, 0.7f, 1.0f).mul(1.0f)); // Very bright blue
         shader.setUniform("isWireframe", false);
         sphereRenderer.render();
 
-        // Layer 3: Core bullet sphere (brightest blue)
+        // Layer 4: Inner bright core
+        Matrix4f innerMatrix = new Matrix4f().identity()
+                .translate(position)
+                .scale(0.12f); // Inner core
+        Matrix4f innerMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(innerMatrix);
+
+        shader.setUniform("mvpMatrix", innerMvp);
+        shader.setUniform("modelMatrix", innerMatrix);
+        shader.setUniform("color", new Vector3f(0.6f, 0.9f, 1.0f).mul(1.3f)); // Brilliant blue-white
+        shader.setUniform("isWireframe", false);
+        sphereRenderer.render();
+
+        // Layer 5: Core bullet sphere (brightest, pulsing)
         Matrix4f coreMatrix = new Matrix4f().identity()
                 .translate(position)
-                .scale(0.5f); // Much larger core sphere size
+                .scale(0.08f * pulse); // Pulsing core
         Matrix4f coreMvp = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(coreMatrix);
 
         shader.setUniform("mvpMatrix", coreMvp);
         shader.setUniform("modelMatrix", coreMatrix);
-        shader.setUniform("color", new Vector3f(0.5f, 0.8f, 1.0f).mul(1.5f)); // Super bright blue core
+        shader.setUniform("color", new Vector3f(0.9f, 0.95f, 1.0f).mul(1.8f * pulse)); // Super bright pulsing core
         shader.setUniform("isWireframe", false);
         sphereRenderer.render();
     }

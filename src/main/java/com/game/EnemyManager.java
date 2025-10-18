@@ -55,7 +55,7 @@ public class EnemyManager {
         }
     }
 
-    public int checkBulletCollisions(BulletManager bulletManager) {
+    public int checkBulletCollisions(BulletManager bulletManager, ExplosionSystem explosionSystem) {
         int enemiesKilled = 0;
 
         for (Bullet bullet : bulletManager.getBullets()) {
@@ -74,14 +74,15 @@ public class EnemyManager {
                 float distance = bulletPos.distance(enemyPos);
 
                 // Check collision (bullet size + enemy size)
-                if (distance < (0.15f + enemy.getSize())) { // Increased collision radius
-                    System.out.println("Bullet hit enemy! Distance: " + distance);
+                if (distance < (0.15f + enemy.getSize())) {
+                    Vector3f explosionPos = new Vector3f(enemyPos); // Store position before enemy dies
                     enemy.takeDamage(1.0f); // 1 damage per bullet
                     bullet.setInactive();
 
                     if (!enemy.isAlive()) {
+                        // Create explosion at enemy position
+                        explosionSystem.createExplosion(explosionPos);
                         enemiesKilled++;
-                        System.out.println("Enemy killed! Total killed: " + enemiesKilled);
                     }
                     break; // Bullet can only hit one enemy
                 }

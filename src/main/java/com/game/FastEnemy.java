@@ -8,7 +8,7 @@ public class FastEnemy extends Enemy {
     private boolean isDashing;
     
     public FastEnemy(Vector3f startPosition) {
-        super(startPosition, 1.0f, 4.0f, 0.6f); // Health set to 1
+        super(startPosition, 1.0f, 4.0f, 1.2f); // Health set to 1, larger size
         this.color = new Vector3f(1.0f, 1.0f, 0.2f); // Yellow
         this.dashCooldown = 3.0f;
         this.dashTimer = 0.0f;

@@ -15,6 +15,7 @@ public class Game {
     private ParticleSystem particleSystem;
     private EnemyManager enemyManager;
     private BulletManager bulletManager;
+    private ExplosionSystem explosionSystem;
     private UIRenderer uiRenderer;
     private Matrix4f projectionMatrix;
 
@@ -102,6 +103,7 @@ public class Game {
         particleSystem = new ParticleSystem();
         enemyManager = new EnemyManager();
         bulletManager = new BulletManager();
+        explosionSystem = new ExplosionSystem();
         uiRenderer = new UIRenderer();
 
         // Initialize with base FOV - will be updated dynamically
@@ -424,9 +426,12 @@ public class Game {
         // Update enemy system
         enemyManager.update(deltaTime, cubePosition);
         
-        // Check bullet-enemy collisions
-        int killedThisFrame = enemyManager.checkBulletCollisions(bulletManager);
+        // Check bullet-enemy collisions and create explosions
+        int killedThisFrame = enemyManager.checkBulletCollisions(bulletManager, explosionSystem);
         enemiesKilled += killedThisFrame;
+        
+        // Update explosion system
+        explosionSystem.update(deltaTime);
 
         // Handle collisions
         handleCollisions(deltaTime);
@@ -514,7 +519,7 @@ public class Game {
         shader.use();
 
         Matrix4f viewMatrix = camera.getViewMatrix();
-        Vector3f lightPos = new Vector3f(5.0f, 10.0f, 5.0f);
+        Vector3f lightPos = new Vector3f(cubePosition.x, cubePosition.y + 8.0f, cubePosition.z); // Light follows player
 
         // Set common uniforms
         shader.setUniform("viewMatrix", viewMatrix);
@@ -522,19 +527,13 @@ public class Game {
         shader.setUniform("lightPos", lightPos);
         shader.setUniform("viewPos", camera.getPosition());
 
-        // Render ground (wireframe)
-        Matrix4f modelMatrix = new Matrix4f().identity();
-        Matrix4f mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-        shader.setUniform("mvpMatrix", mvpMatrix);
-        shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.0f, 1.0f, 1.0f)); // Cyan
-        shader.setUniform("isWireframe", true);
-        ground.render();
+        // Render ground (black grid with white/grey squares)
+        ground.render(shader, viewMatrix, projectionMatrix);
 
         // SIMPLE CARTOONY YELLOW CUBE - NO SIZE CHANGES OR GLOW EFFECTS
         // Render solid yellow cube
-        modelMatrix = new Matrix4f().identity().translate(cubePosition);
-        mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+        Matrix4f modelMatrix = new Matrix4f().identity().translate(cubePosition);
+        Matrix4f mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
         shader.setUniform("color", new Vector3f(1.0f, 1.0f, 0.0f)); // Bright yellow
@@ -556,6 +555,9 @@ public class Game {
 
         // Render enemies
         enemyManager.render(shader, viewMatrix, projectionMatrix);
+        
+        // Render explosions
+        explosionSystem.render(shader, viewMatrix, projectionMatrix);
 
         // Render UI elements
         renderUI();
@@ -590,6 +592,7 @@ public class Game {
         ground.cleanup();
         particleSystem.cleanup();
         bulletManager.cleanup();
+        explosionSystem.cleanup();
         enemyManager.cleanup();
         uiRenderer.cleanup();
 
