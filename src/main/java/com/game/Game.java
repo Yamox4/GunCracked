@@ -60,6 +60,13 @@ public class Game {
     private float pulseTime = 0.0f; // For pulsing energy
     private boolean isCurrentlyMoving = false; // Track movement state for rendering
 
+    // Player health and collision system
+    private float playerHealth = 100.0f;
+    private final float maxPlayerHealth = 100.0f;
+    private final float cubeSize = 1.0f; // Size for collision detection
+    private float damageTimer = 0.0f;
+    private final float damageInterval = 1.0f; // Take damage every 1 second when touching enemies
+
     public Game(long window) {
         this.window = window;
     }
@@ -159,6 +166,34 @@ public class Game {
     private void updateProjectionMatrix() {
         projectionMatrix = new Matrix4f().perspective(
                 (float) Math.toRadians(currentFov), 1600.0f / 1028.0f, 0.1f, 100.0f);
+    }
+
+    private void handleCollisions(float deltaTime) {
+        // Update damage timer
+        if (damageTimer > 0) {
+            damageTimer -= deltaTime;
+        }
+
+        // Check player-enemy collisions
+        boolean hasCollision = enemyManager.checkPlayerCollisions(cubePosition, cubeSize);
+
+        if (hasCollision && damageTimer <= 0) {
+            // Take damage
+            playerHealth -= 20.0f; // 20 damage per hit
+            damageTimer = damageInterval; // Reset damage timer
+
+            // Visual feedback - extra particle burst when hit
+            particleSystem.emitLightningParticles(cubePosition, true, true);
+
+            // Check if player is dead
+            if (playerHealth <= 0) {
+                playerHealth = 0;
+                // TODO: Handle player death (restart game, show game over, etc.)
+                System.out.println("Player defeated! Health: " + playerHealth);
+            } else {
+                System.out.println("Player hit! Health: " + playerHealth);
+            }
+        }
     }
 
     public void update() {
@@ -301,6 +336,9 @@ public class Game {
 
         // Update enemy system
         enemyManager.update(deltaTime, cubePosition);
+
+        // Handle collisions
+        handleCollisions(deltaTime);
 
         // Update camera to follow cube
         updateCameraPosition();

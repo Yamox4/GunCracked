@@ -41,6 +41,9 @@ public class EnemyManager {
             enemy.update(deltaTime, playerPosition);
         }
         
+        // Handle enemy-to-enemy collisions
+        CollisionSystem.resolveEnemyCollisions(enemies);
+        
         // Remove dead enemies
         enemies.removeIf(enemy -> !enemy.isAlive());
         
@@ -125,6 +128,11 @@ public class EnemyManager {
     
     public List<Enemy> getEnemies() {
         return new ArrayList<>(enemies);
+    }
+    
+    // Check and resolve collisions with player
+    public boolean checkPlayerCollisions(Vector3f playerPosition, float playerSize) {
+        return CollisionSystem.checkPlayerEnemyCollisions(playerPosition, playerSize, enemies);
     }
     
     public void cleanup() {
