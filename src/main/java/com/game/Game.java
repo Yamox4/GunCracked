@@ -15,10 +15,21 @@ public class Game {
     private Matrix4f projectionMatrix;
 
     private Vector3f cubePosition = new Vector3f(0, 0, 0);
-    private final float cubeSpeed = 8.0f;
+    private final float cubeSpeed = 5.0f;
     private final float hoverHeight = 1.5f; // Fixed hover height above ground
     private float hoverOffset = 0.0f; // For subtle hovering animation
     private float hoverTime = 0.0f;
+    
+    // Jump mechanics
+    private boolean isJumping = false;
+    private boolean isGrounded = true;
+    private boolean spaceKeyPressed = false; // Track space key state to prevent holding
+    private float jumpVelocity = 0.0f;
+    private float jumpCooldownTimer = 0.0f;
+    private final float jumpStrength = 10.0f;
+    private final float gravity = 15.0f;
+    private final float maxJumpHeight = 4.0f;
+    private final float jumpCooldown = 0.5f; // 0.5 second cooldown between jumps
 
     // Mouse input for camera
     private boolean firstMouse = true;
@@ -131,9 +142,8 @@ public class Game {
     public void update() {
         float deltaTime = 0.016f; // ~60 FPS
 
-        // Update hover animation
+        // Update hover animation (always active for continuous bobbing)
         hoverTime += deltaTime * 2.0f; // Speed of hover animation
-        hoverOffset = (float) Math.sin(hoverTime) * 0.1f; // Subtle up/down movement
 
         // Calculate movement directions based on camera yaw (horizontal rotation only)
         float yawRad = (float) Math.toRadians(cameraYaw);
@@ -166,23 +176,77 @@ public class Game {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
             movement.add(right); // Move right
         }
+        
+        // Update jump cooldown timer
+        if (jumpCooldownTimer > 0) {
+            jumpCooldownTimer -= deltaTime;
+        }
+        
+        // Jump input with cooldown and double jump prevention
+        boolean spaceCurrentlyPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS;
+        
+        // Only jump if:
+        // 1. Space key was just pressed (not held)
+        // 2. Player is grounded (not in air)
+        // 3. Cooldown has expired
+        // 4. Not already jumping
+        if (spaceCurrentlyPressed && !spaceKeyPressed && isGrounded && jumpCooldownTimer <= 0 && !isJumping) {
+            isJumping = true;
+            isGrounded = false;
+            jumpVelocity = jumpStrength;
+            jumpCooldownTimer = jumpCooldown; // Start cooldown
+        }
+        
+        // Update space key state for next frame
+        spaceKeyPressed = spaceCurrentlyPressed;
 
-        // Apply horizontal movement only
-        if (movement.length() > 0) {
+        // Calculate hover offset based on movement (enhanced bobbing when moving)
+        boolean isMoving = movement.length() > 0;
+        if (isMoving) {
+            // Enhanced bobbing when moving - faster and more pronounced
+            hoverOffset = (float) Math.sin(hoverTime * 1.5f) * 0.15f; // More pronounced bobbing
+        } else {
+            // Subtle bobbing when stationary
+            hoverOffset = (float) Math.sin(hoverTime) * 0.08f; // Gentle bobbing
+        }
+        
+        // Apply horizontal movement
+        if (isMoving) {
             movement.normalize().mul(cubeSpeed * deltaTime);
             // Only update X and Z coordinates (horizontal movement)
             cubePosition.x += movement.x;
             cubePosition.z += movement.z;
-            // Y coordinate is always fixed at hover height + animation offset
-            cubePosition.y = hoverHeight + hoverOffset;
-
-            // Update camera to follow cube
-            updateCameraPosition();
-        } else {
-            // Even when not moving, update Y position for hover animation
-            cubePosition.y = hoverHeight + hoverOffset;
-            updateCameraPosition();
         }
+        
+        // Handle jump physics
+        if (isJumping) {
+            // Apply jump velocity to Y position
+            cubePosition.y += jumpVelocity * deltaTime;
+            
+            // Apply gravity to reduce jump velocity
+            jumpVelocity -= gravity * deltaTime;
+            
+            // Check if landed back at hover height
+            if (cubePosition.y <= hoverHeight + hoverOffset) {
+                cubePosition.y = hoverHeight + hoverOffset;
+                isJumping = false;
+                isGrounded = true; // Player has landed
+                jumpVelocity = 0.0f;
+            }
+            
+            // Prevent jumping too high
+            if (cubePosition.y > hoverHeight + maxJumpHeight) {
+                cubePosition.y = hoverHeight + maxJumpHeight;
+                jumpVelocity = 0.0f; // Stop upward movement at max height
+            }
+        } else {
+            // Normal hover animation when not jumping
+            cubePosition.y = hoverHeight + hoverOffset;
+            isGrounded = true; // Player is on ground when not jumping
+        }
+        
+        // Update camera to follow cube
+        updateCameraPosition();
 
         // Camera zoom is now handled by mouse scroll wheel
         // ESC to exit
