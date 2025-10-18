@@ -277,6 +277,101 @@ public class UIRenderer {
         shader.setUniform("projectionMatrix", projectionMatrix);
     }
     
+    public void renderLevelBar(LevelSystem levelSystem, Shader shader, Matrix4f projectionMatrix) {
+        // Setup 2D rendering
+        Matrix4f orthoMatrix = new Matrix4f().ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+        shader.setUniform("projectionMatrix", orthoMatrix);
+        shader.setUniform("viewMatrix", new Matrix4f().identity());
+        
+        // Level bar at bottom of screen
+        float barWidth = 1.6f; // 80% of screen width
+        float barHeight = 0.08f;
+        float barX = -0.8f; // Center horizontally
+        float barY = -0.9f; // Bottom of screen
+        
+        Vector3f borderColor = new Vector3f(1.0f, 1.0f, 1.0f); // White border
+        Vector3f bgColor = new Vector3f(0.2f, 0.2f, 0.2f); // Dark background
+        Vector3f expColor = new Vector3f(1.0f, 0.8f, 0.0f); // Gold exp bar
+        Vector3f textColor = new Vector3f(1.0f, 1.0f, 1.0f); // White text
+        
+        // Render background bar
+        renderRect(barX, barY, barWidth, barHeight, bgColor, shader);
+        
+        // Render exp progress bar
+        float progress = levelSystem.getLevelProgress();
+        float progressWidth = barWidth * progress;
+        renderRect(barX, barY, progressWidth, barHeight, expColor, shader);
+        
+        // Render border
+        renderRectBorder(barX, barY, barWidth, barHeight, borderColor, shader);
+        
+        // Render level text (left side)
+        float textSize = 0.04f;
+        float textY = barY + (barHeight - textSize) / 2;
+        renderText("LV " + levelSystem.getCurrentLevel(), barX + 0.05f, textY, textSize, textColor, shader);
+        
+        // Render exp text (center)
+        String expText = levelSystem.getCurrentExp() + "/" + levelSystem.getExpToNextLevel();
+        float expTextWidth = expText.length() * textSize * 0.6f;
+        renderText(expText, -expTextWidth / 2, textY, textSize, textColor, shader);
+        
+        // Render exp remaining (right side)
+        String remainingText = levelSystem.getExpRemaining() + " EXP";
+        float remainingWidth = remainingText.length() * textSize * 0.6f;
+        renderText(remainingText, barX + barWidth - remainingWidth - 0.05f, textY, textSize, textColor, shader);
+        
+        // Restore projection matrix
+        shader.setUniform("projectionMatrix", projectionMatrix);
+    }
+    
+    private void renderRect(float x, float y, float width, float height, Vector3f color, Shader shader) {
+        // Simple rectangle rendering using lines (since we don't have filled quad rendering)
+        for (float i = 0; i < height; i += 0.01f) {
+            renderLine(x, y + i, x + width, y + i, color, shader);
+        }
+    }
+    
+    private void renderRectBorder(float x, float y, float width, float height, Vector3f color, Shader shader) {
+        // Render rectangle border
+        renderLine(x, y, x + width, y, color, shader); // Bottom
+        renderLine(x, y + height, x + width, y + height, color, shader); // Top
+        renderLine(x, y, x, y + height, color, shader); // Left
+        renderLine(x + width, y, x + width, y + height, color, shader); // Right
+    }
+    
+    private void renderLine(float x1, float y1, float x2, float y2, Vector3f color, Shader shader) {
+        // Simple line rendering using pixel rendering
+        float dx = x2 - x1;
+        float dy = y2 - y1;
+        float length = (float) Math.sqrt(dx * dx + dy * dy);
+        int steps = (int) (length * 1000); // Number of pixels to draw
+        
+        for (int i = 0; i <= steps; i++) {
+            float t = (float) i / steps;
+            float x = x1 + dx * t;
+            float y = y1 + dy * t;
+            renderPixel(x, y, 0.002f, shader, color);
+        }
+    }
+    
+    private void renderText(String text, float x, float y, float size, Vector3f color, Shader shader) {
+        float currentX = x;
+        float spacing = size * 0.8f;
+        
+        for (char c : text.toCharArray()) {
+            if (c == ' ') {
+                currentX += spacing;
+                continue;
+            }
+            
+            int charIndex = getCharIndex(c);
+            if (charIndex >= 0) {
+                renderCharacter(charIndex, currentX, y, size, shader, color);
+            }
+            currentX += spacing;
+        }
+    }
+
     public void renderDebugConsole(int fps, int enemyCount, float playerHealth, int enemiesKilled, int coinsCollected, Shader shader, Matrix4f projectionMatrix) {
         // Setup 2D rendering
         Matrix4f orthoMatrix = new Matrix4f().ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);

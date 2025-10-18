@@ -20,15 +20,12 @@ public class Coin {
 
     public Coin(Vector3f startPosition) {
         this.position = new Vector3f(startPosition);
-        this.velocity = new Vector3f(
-                (float) (Math.random() - 0.5) * 4.0f, // Random horizontal velocity
-                2.0f + (float) Math.random() * 3.0f, // Upward velocity
-                (float) (Math.random() - 0.5) * 4.0f // Random horizontal velocity
-        );
+        this.position.y = 1.0f; // Set to hover height immediately
+        this.velocity = new Vector3f(0, 0, 0); // No initial velocity - just float
         this.rotationY = 0.0f;
         this.rotationSpeed = 180.0f + (float) Math.random() * 180.0f; // Random spin speed
-        this.life = 15.0f; // Coins last 15 seconds
-        this.maxLife = 15.0f;
+        this.life = 30.0f; // Coins last longer
+        this.maxLife = 30.0f;
         this.collected = false;
         this.bobOffset = 0.0f;
         this.bobTime = 0.0f;
@@ -58,10 +55,9 @@ public class Coin {
                         toPlayer.z * collectionSpeed * deltaTime);
             }
 
-            // Finish collection when very close to player
-            if (distanceToPlayer < 0.2f) {
+            // Finish collection when close to player
+            if (distanceToPlayer < 0.3f) {
                 collected = true;
-                System.out.println("Coin fully collected and marked for removal");
                 return;
             }
 
@@ -101,35 +97,21 @@ public class Coin {
             }
         }
 
-        // Simple floating behavior - no complex physics
+        // Simple floating behavior - NO GRAVITY, just floating and bobbing
         float hoverHeight = 1.0f; // Target hover height
 
         if (!inMagnetRange) {
-            // Apply gentle settling physics only when not magnetized
-            position.add(velocity.x * deltaTime, velocity.y * deltaTime, velocity.z * deltaTime);
-
-            // Apply gravity only if above hover height
-            if (position.y > hoverHeight) {
-                velocity.y -= 5.0f * deltaTime;
-            }
-
-            // Ground collision - settle at hover height
-            if (position.y <= hoverHeight) {
-                position.y = hoverHeight;
-                velocity.y = 0.0f; // Stop vertical movement
-                velocity.x *= 0.9f; // Apply friction
-                velocity.z *= 0.9f;
-            }
-        } else {
-            // When magnetized, just apply velocity directly
-            position.add(velocity.x * deltaTime, velocity.y * deltaTime, velocity.z * deltaTime);
-        }
-
-        // Simple bobbing animation when settled
-        if (Math.abs(velocity.x) < 0.1f && Math.abs(velocity.z) < 0.1f && !inMagnetRange) {
+            // Just float and bob - no physics
             bobTime += deltaTime * 2.0f;
-            bobOffset = (float) Math.sin(bobTime) * 0.1f;
+            bobOffset = (float) Math.sin(bobTime) * 0.15f;
             position.y = hoverHeight + bobOffset;
+            
+            // Dampen any horizontal velocity
+            velocity.x *= 0.95f;
+            velocity.z *= 0.95f;
+        } else {
+            // When magnetized, apply velocity
+            position.add(velocity.x * deltaTime, velocity.y * deltaTime, velocity.z * deltaTime);
         }
 
         // Update rotation
@@ -148,13 +130,10 @@ public class Coin {
             return false;
         }
 
-        // Use proper 3D collision detection with both coin and player sizes
-        float coinRadius = size * 0.8f; // Coin collision radius (slightly smaller than visual)
-        float playerRadius = playerSize * 0.5f; // Player collision radius
-        float totalRadius = coinRadius + playerRadius;
-
+        // Simple and reliable collision detection
+        float collectionRadius = 1.0f; // Fixed collection radius
         float distance = position.distance(playerPosition);
-        return distance < totalRadius;
+        return distance < collectionRadius;
     }
 
     // Additional method for magnet range detection

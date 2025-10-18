@@ -135,7 +135,7 @@ public class CoinManager {
         System.out.println("💰 Coin spawned at: " + position + " | Total active coins: " + coins.size());
     }
     
-    public void update(float deltaTime, Vector3f playerPosition, float playerSize) {
+    public void update(float deltaTime, Vector3f playerPosition, float playerSize, LevelSystem levelSystem) {
         Iterator<Coin> iterator = coins.iterator();
         while (iterator.hasNext()) {
             Coin coin = iterator.next();
@@ -147,18 +147,29 @@ public class CoinManager {
             if (coin.checkCollision(playerPosition, playerSize) && !coin.isCollected() && !coin.isCollecting()) {
                 coin.collect(); // Start collection animation
                 coinsCollected++;
-                float distance = coin.getDistanceToPlayer(playerPosition);
-                System.out.println("✨ COIN COLLECTED! ✨ Total: " + coinsCollected + " (Distance: " + String.format("%.2f", distance) + ")");
+                
+                // Add 1 EXP per coin to level system
+                boolean leveledUp = levelSystem.addExp(1);
+                
+                System.out.println("✨ COIN COLLECTED! ✨ +1 EXP | Total coins: " + coinsCollected + 
+                                 " | " + levelSystem.getDebugInfo());
+                
+                if (leveledUp) {
+                    System.out.println("🎉 LEVEL UP! 🎉 Reached level " + levelSystem.getCurrentLevel());
+                }
             }
             
             // Remove coins that are fully collected or expired
             if (!coin.isActive()) {
                 iterator.remove();
-                System.out.println("Coin removed from world. Active coins remaining: " + coins.size());
             }
         }
-        
-        // Reduced debug spam
+    }
+    
+    // Backward compatibility method
+    public void update(float deltaTime, Vector3f playerPosition, float playerSize) {
+        // This method is kept for compatibility but should not be used with level system
+        update(deltaTime, playerPosition, playerSize, null);
     }
     
     public void render(Shader shader, Matrix4f viewMatrix, Matrix4f projectionMatrix, Vector3f playerPosition, float playerSize) {

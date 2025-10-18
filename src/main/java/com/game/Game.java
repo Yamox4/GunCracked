@@ -17,6 +17,7 @@ public class Game {
     private BulletManager bulletManager;
     private ExplosionSystem explosionSystem;
     private CoinManager coinManager;
+    private LevelSystem levelSystem;
     private UIRenderer uiRenderer;
     private Matrix4f projectionMatrix;
 
@@ -106,6 +107,7 @@ public class Game {
         bulletManager = new BulletManager();
         explosionSystem = new ExplosionSystem();
         coinManager = new CoinManager();
+        levelSystem = new LevelSystem();
         uiRenderer = new UIRenderer();
 
         // Initialize with base FOV - will be updated dynamically
@@ -447,8 +449,8 @@ public class Game {
         // Update explosion system
         explosionSystem.update(deltaTime);
         
-        // Update coin system
-        coinManager.update(deltaTime, cubePosition, cubeSize);
+        // Update coin system with level system
+        coinManager.update(deltaTime, cubePosition, cubeSize, levelSystem);
 
         // Handle collisions
         handleCollisions(deltaTime);
@@ -597,6 +599,9 @@ public class Game {
         
         // Render debug console
         uiRenderer.renderDebugConsole(currentFps, enemyManager.getEnemyCount(), playerHealth, enemiesKilled, coinManager.getCoinsCollected(), shader, projectionMatrix);
+        
+        // Render level/exp bar at bottom
+        uiRenderer.renderLevelBar(levelSystem, shader, projectionMatrix);
 
         // Render pause overlay if paused
         if (isPaused) {
@@ -611,6 +616,11 @@ public class Game {
     // Getter for coin manager (for level-up system)
     public CoinManager getCoinManager() {
         return coinManager;
+    }
+    
+    // Getter for level system
+    public LevelSystem getLevelSystem() {
+        return levelSystem;
     }
 
     public void cleanup() {
