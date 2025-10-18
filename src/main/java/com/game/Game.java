@@ -14,6 +14,7 @@ public class Game {
     private Ground ground;
     private ParticleSystem particleSystem;
     private EnemyManager enemyManager;
+    private UIRenderer uiRenderer;
     private Matrix4f projectionMatrix;
 
     private Vector3f cubePosition = new Vector3f(0, 0, 0);
@@ -67,6 +68,18 @@ public class Game {
     private float damageTimer = 0.0f;
     private final float damageInterval = 1.0f; // Take damage every 1 second when touching enemies
 
+    // Game timer and pause system
+    private float gameTimer = 0.0f;
+    private final float maxGameTime = 600.0f; // 10 minutes in seconds
+    private boolean isPaused = false;
+    private boolean escapeKeyPressed = false;
+    private boolean gameEnded = false;
+    private long tronCursor;
+
+    // Proper timing system
+    private long lastFrameTime = 0;
+    private float deltaTime = 0.0f;
+
     public Game(long window) {
         this.window = window;
     }
@@ -78,6 +91,7 @@ public class Game {
         ground = new Ground();
         particleSystem = new ParticleSystem();
         enemyManager = new EnemyManager();
+        uiRenderer = new UIRenderer();
 
         // Initialize with base FOV - will be updated dynamically
         updateProjectionMatrix();
@@ -85,6 +99,9 @@ public class Game {
         // Setup mouse input for camera control
         setupMouseInput();
         setupScrollInput();
+
+        // Create custom tron cursor
+        createTronCursor();
 
         // Capture the cursor for camera control
         GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
@@ -97,6 +114,11 @@ public class Game {
         cursorPosCallback = new GLFWCursorPosCallback() {
             @Override
             public void invoke(long window, double xpos, double ypos) {
+                // Don't process mouse input when paused
+                if (isPaused) {
+                    return;
+                }
+
                 if (firstMouse) {
                     lastX = xpos;
                     lastY = ypos;
@@ -197,7 +219,36 @@ public class Game {
     }
 
     public void update() {
-        float deltaTime = 0.016f; // ~60 FPS
+        // Calculate real deltaTime
+        long currentTime = System.nanoTime();
+        if (lastFrameTime == 0) {
+            lastFrameTime = currentTime;
+        }
+        deltaTime = (currentTime - lastFrameTime) / 1_000_000_000.0f; // Convert to seconds
+        lastFrameTime = currentTime;
+
+        // Cap deltaTime to prevent huge jumps (e.g., when debugging)
+        if (deltaTime > 0.1f) {
+            deltaTime = 0.016f; // Fall back to ~60 FPS
+        }
+
+        // Handle pause input (ESC key)
+        handlePauseInput();
+
+        // Don't update game logic when paused or game ended
+        if (isPaused || gameEnded) {
+            return;
+        }
+
+        // Update game timer
+        gameTimer += deltaTime;
+
+        // Check if game time limit reached
+        if (gameTimer >= maxGameTime) {
+            gameEnded = true;
+            System.out.println("Game completed! You survived 10 minutes!");
+            return;
+        }
 
         // Update hover animation (always active for continuous bobbing)
         hoverTime += deltaTime * 2.0f; // Speed of hover animation
@@ -344,10 +395,79 @@ public class Game {
         updateCameraPosition();
 
         // Camera zoom is now handled by mouse scroll wheel
-        // ESC to exit
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS) {
-            GLFW.glfwSetWindowShouldClose(window, true);
+        // ESC key handling is now in handlePauseInput() method
+    }
+
+    private void handlePauseInput() {
+        boolean escapeCurrentlyPressed = GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS;
+
+        // Toggle pause when ESC is pressed (not held)
+        if (escapeCurrentlyPressed && !escapeKeyPressed) {
+            isPaused = !isPaused;
+
+            if (isPaused) {
+                // Show custom tron cursor when paused
+                GLFW.glfwSetCursor(window, tronCursor);
+                GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_NORMAL);
+                System.out.println("Game paused");
+            } else {
+                // Hide cursor when unpaused
+                GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
+                firstMouse = true; // Reset mouse to prevent camera jump
+                System.out.println("Game resumed");
+            }
         }
+
+        escapeKeyPressed = escapeCurrentlyPressed;
+    }
+
+    private void createTronCursor() {
+        // Create a simple tron-style cursor (16x16 pixels)
+        int size = 16;
+        int[] pixels = new int[size * size];
+
+        // Create a glowing cross pattern
+        for (int y = 0; y < size; y++) {
+            for (int x = 0; x < size; x++) {
+                int index = y * size + x;
+
+                // Create cross pattern with glow
+                boolean isCross = (x == size / 2 || y == size / 2);
+                boolean isGlow = (Math.abs(x - size / 2) <= 1 || Math.abs(y - size / 2) <= 1);
+
+                if (isCross) {
+                    // Bright cyan center
+                    pixels[index] = 0xFF00FFFF; // ARGB: Full alpha, cyan
+                } else if (isGlow) {
+                    // Dimmer cyan glow
+                    pixels[index] = 0x8000FFFF; // ARGB: Half alpha, cyan
+                } else {
+                    // Transparent
+                    pixels[index] = 0x00000000;
+                }
+            }
+        }
+
+        // Create GLFW cursor
+        org.lwjgl.glfw.GLFWImage cursorImage = org.lwjgl.glfw.GLFWImage.malloc();
+        cursorImage.width(size);
+        cursorImage.height(size);
+
+        java.nio.ByteBuffer pixelBuffer = org.lwjgl.system.MemoryUtil.memAlloc(size * size * 4);
+        for (int pixel : pixels) {
+            pixelBuffer.put((byte) ((pixel >> 16) & 0xFF)); // R
+            pixelBuffer.put((byte) ((pixel >> 8) & 0xFF));  // G
+            pixelBuffer.put((byte) (pixel & 0xFF));         // B
+            pixelBuffer.put((byte) ((pixel >> 24) & 0xFF)); // A
+        }
+        pixelBuffer.flip();
+        cursorImage.pixels(pixelBuffer);
+
+        tronCursor = GLFW.glfwCreateCursor(cursorImage, size / 2, size / 2);
+
+        // Cleanup
+        org.lwjgl.system.MemoryUtil.memFree(pixelBuffer);
+        cursorImage.free();
     }
 
     public void render() {
@@ -453,6 +573,29 @@ public class Game {
 
         // Render enemies
         enemyManager.render(shader, viewMatrix, projectionMatrix);
+
+        // Render UI elements
+        renderUI();
+    }
+
+    private void renderUI() {
+        // Disable depth testing for UI
+        org.lwjgl.opengl.GL11.glDisable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
+
+        // Set line width for better visibility
+        org.lwjgl.opengl.GL11.glLineWidth(2.0f);
+
+        // Render timer
+        uiRenderer.renderTimer(gameTimer, shader, projectionMatrix);
+
+        // Render pause overlay if paused
+        if (isPaused) {
+            uiRenderer.renderPauseOverlay(shader, projectionMatrix);
+        }
+
+        // Reset line width and re-enable depth testing
+        org.lwjgl.opengl.GL11.glLineWidth(1.0f);
+        org.lwjgl.opengl.GL11.glEnable(org.lwjgl.opengl.GL11.GL_DEPTH_TEST);
     }
 
     public void cleanup() {
@@ -461,6 +604,7 @@ public class Game {
         ground.cleanup();
         particleSystem.cleanup();
         enemyManager.cleanup();
+        uiRenderer.cleanup();
 
         // Free callbacks
         if (cursorPosCallback != null) {
@@ -468,6 +612,11 @@ public class Game {
         }
         if (scrollCallback != null) {
             scrollCallback.free();
+        }
+
+        // Cleanup custom cursor
+        if (tronCursor != 0) {
+            GLFW.glfwDestroyCursor(tronCursor);
         }
     }
 }
