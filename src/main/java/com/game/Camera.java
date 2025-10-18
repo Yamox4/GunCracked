@@ -29,6 +29,14 @@ public class Camera {
         updateViewMatrix();
     }
     
+    public void lookAt(Vector3f target) {
+        Vector3f direction = new Vector3f(target).sub(position).normalize();
+        front.set(direction);
+        right = new Vector3f(front).cross(worldUp).normalize();
+        up = new Vector3f(right).cross(front).normalize();
+        updateViewMatrix();
+    }
+    
     public void processMouseMovement(float xOffset, float yOffset) {
         xOffset *= mouseSensitivity;
         yOffset *= mouseSensitivity;

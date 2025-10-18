@@ -1,12 +1,12 @@
 package com.game;
 
+import java.util.ArrayList;
+import java.util.List;
+
 import org.lwjgl.opengl.GL11;
 import org.lwjgl.opengl.GL15;
 import org.lwjgl.opengl.GL20;
 import org.lwjgl.opengl.GL30;
-
-import java.util.ArrayList;
-import java.util.List;
 
 public class Ground {
     private int vaoId;
@@ -19,7 +19,7 @@ public class Ground {
     
     private void createCheckerboardGrid() {
         List<Float> vertices = new ArrayList<>();
-        int gridSize = 20;
+        int gridSize = 200;
         float spacing = 1.0f;
         float halfGrid = gridSize * spacing * 0.5f;
         
