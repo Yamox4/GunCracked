@@ -14,6 +14,7 @@ public class Game {
     private Ground ground;
     private ParticleSystem particleSystem;
     private EnemyManager enemyManager;
+    private BulletManager bulletManager;
     private UIRenderer uiRenderer;
     private Matrix4f projectionMatrix;
 
@@ -66,7 +67,16 @@ public class Game {
     private final float maxPlayerHealth = 100.0f;
     private final float cubeSize = 1.0f; // Size for collision detection
     private float damageTimer = 0.0f;
-    private final float damageInterval = 1.0f; // Take damage every 1 second when touching enemies
+    private final float damageInterval = 1.0f; // Take damage 1 per hit
+    
+    // Shooting system
+    private boolean leftMousePressed = false;
+    private int enemiesKilled = 0;
+    
+    // Debug and FPS tracking
+    private int frameCount = 0;
+    private float fpsTimer = 0.0f;
+    private int currentFps = 0;
 
     // Game timer and pause system
     private float gameTimer = 0.0f;
@@ -91,6 +101,7 @@ public class Game {
         ground = new Ground();
         particleSystem = new ParticleSystem();
         enemyManager = new EnemyManager();
+        bulletManager = new BulletManager();
         uiRenderer = new UIRenderer();
 
         // Initialize with base FOV - will be updated dynamically
@@ -201,7 +212,7 @@ public class Game {
 
         if (hasCollision && damageTimer <= 0) {
             // Take damage
-            playerHealth -= 20.0f; // 20 damage per hit
+            playerHealth -= 1.0f; // 1 damage per hit
             damageTimer = damageInterval; // Reset damage timer
 
             // Visual feedback - extra particle burst when hit
@@ -212,8 +223,6 @@ public class Game {
                 playerHealth = 0;
                 // TODO: Handle player death (restart game, show game over, etc.)
                 System.out.println("Player defeated! Health: " + playerHealth);
-            } else {
-                System.out.println("Player hit! Health: " + playerHealth);
             }
         }
     }
@@ -230,6 +239,15 @@ public class Game {
         // Cap deltaTime to prevent huge jumps (e.g., when debugging)
         if (deltaTime > 0.1f) {
             deltaTime = 0.016f; // Fall back to ~60 FPS
+        }
+        
+        // Update FPS counter
+        frameCount++;
+        fpsTimer += deltaTime;
+        if (fpsTimer >= 1.0f) {
+            currentFps = frameCount;
+            frameCount = 0;
+            fpsTimer = 0.0f;
         }
 
         // Handle pause input (ESC key)
@@ -312,6 +330,17 @@ public class Game {
 
         // Update space key state for next frame
         spaceKeyPressed = spaceCurrentlyPressed;
+        
+        // Handle shooting input (left mouse button OR automatic shooting)
+        boolean leftMouseCurrentlyPressed = GLFW.glfwGetMouseButton(window, GLFW.GLFW_MOUSE_BUTTON_LEFT) == GLFW.GLFW_PRESS;
+        
+        // Auto-shoot at enemies with controlled rate
+        Vector3f closestEnemyPos = enemyManager.findClosestEnemy(cubePosition);
+        if (closestEnemyPos != null && bulletManager.canShoot()) {
+            bulletManager.shoot(new Vector3f(cubePosition).add(0, 0.5f, 0), closestEnemyPos);
+        }
+        
+        leftMousePressed = leftMouseCurrentlyPressed;
 
         // Calculate hover offset based on movement (enhanced bobbing when moving)
         boolean isMoving = movement.length() > 0;
@@ -389,8 +418,15 @@ public class Game {
         }
         particleSystem.update(deltaTime);
 
+        // Update bullet system
+        bulletManager.update(deltaTime);
+        
         // Update enemy system
         enemyManager.update(deltaTime, cubePosition);
+        
+        // Check bullet-enemy collisions
+        int killedThisFrame = enemyManager.checkBulletCollisions(bulletManager);
+        enemiesKilled += killedThisFrame;
 
         // Handle collisions
         handleCollisions(deltaTime);
@@ -514,6 +550,9 @@ public class Game {
 
         // Render lightning particle effects
         particleSystem.render(shader, viewMatrix, projectionMatrix);
+        
+        // Render bullets
+        bulletManager.render(shader, viewMatrix, projectionMatrix);
 
         // Render enemies
         enemyManager.render(shader, viewMatrix, projectionMatrix);
@@ -531,6 +570,9 @@ public class Game {
 
         // Render timer
         uiRenderer.renderTimer(gameTimer, shader, projectionMatrix);
+        
+        // Render debug console
+        uiRenderer.renderDebugConsole(currentFps, enemyManager.getEnemyCount(), playerHealth, enemiesKilled, shader, projectionMatrix);
 
         // Render pause overlay if paused
         if (isPaused) {
@@ -547,6 +589,7 @@ public class Game {
         cube.cleanup();
         ground.cleanup();
         particleSystem.cleanup();
+        bulletManager.cleanup();
         enemyManager.cleanup();
         uiRenderer.cleanup();
 

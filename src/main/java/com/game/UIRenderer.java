@@ -277,6 +277,88 @@ public class UIRenderer {
         shader.setUniform("projectionMatrix", projectionMatrix);
     }
     
+    public void renderDebugConsole(int fps, int enemyCount, float playerHealth, int enemiesKilled, Shader shader, Matrix4f projectionMatrix) {
+        // Setup 2D rendering
+        Matrix4f orthoMatrix = new Matrix4f().ortho(-1.0f, 1.0f, -1.0f, 1.0f, -1.0f, 1.0f);
+        shader.setUniform("projectionMatrix", orthoMatrix);
+        shader.setUniform("viewMatrix", new Matrix4f().identity());
+        
+        Vector3f textColor = new Vector3f(0.0f, 1.0f, 1.0f); // Cyan text
+        Vector3f borderColor = new Vector3f(1.0f, 1.0f, 1.0f); // White border
+        
+        float charSize = 0.04f;
+        float lineHeight = 0.06f;
+        float startX = -0.98f; // Top left corner
+        float startY = 0.9f;
+        
+        // Debug panel border
+        float panelWidth = 0.3f;
+        float panelHeight = 0.25f;
+        renderPanelBorder(startX - 0.01f, startY - panelHeight + 0.01f, panelWidth, panelHeight, shader, borderColor);
+        
+        // Render debug info
+        renderDebugLine("FPS", fps, startX, startY, charSize, shader, textColor);
+        renderDebugLine("ENEMIES", enemyCount, startX, startY - lineHeight, charSize, shader, textColor);
+        renderDebugLine("HEALTH", (int)playerHealth, startX, startY - lineHeight * 2, charSize, shader, textColor);
+        renderDebugLine("KILLED", enemiesKilled, startX, startY - lineHeight * 3, charSize, shader, textColor);
+        
+        // Restore projection matrix
+        shader.setUniform("projectionMatrix", projectionMatrix);
+    }
+    
+    private void renderDebugLine(String label, int value, float x, float y, float charSize, Shader shader, Vector3f color) {
+        float spacing = charSize * 0.8f;
+        float currentX = x;
+        
+        // Render label
+        for (char c : label.toCharArray()) {
+            int charIndex = getCharIndex(c);
+            if (charIndex >= 0) {
+                renderCharacter(charIndex, currentX, y, charSize, shader, color);
+            }
+            currentX += spacing;
+        }
+        
+        // Render colon
+        renderCharacter(10, currentX, y, charSize, shader, color); // colon
+        currentX += spacing;
+        
+        // Render value
+        String valueStr = String.valueOf(value);
+        for (char c : valueStr.toCharArray()) {
+            int charIndex = getCharIndex(c);
+            if (charIndex >= 0) {
+                renderCharacter(charIndex, currentX, y, charSize, shader, color);
+            }
+            currentX += spacing;
+        }
+    }
+    
+    private int getCharIndex(char c) {
+        if (c >= '0' && c <= '9') {
+            return c - '0'; // 0-9
+        }
+        switch (c) {
+            case ':': return 10;
+            case 'P': return 11;
+            case 'A': return 12;
+            case 'U': return 13;
+            case 'S': return 14;
+            case 'E': return 15;
+            case 'D': return 16;
+            case 'F': return 11; // Use P for F
+            case 'R': return 11; // Use P for R
+            case 'N': return 11; // Use P for N
+            case 'M': return 11; // Use P for M
+            case 'I': return 1;  // Use 1 for I
+            case 'L': return 1;  // Use 1 for L
+            case 'T': return 7;  // Use 7 for T
+            case 'H': return 11; // Use P for H
+            case 'K': return 11; // Use P for K
+            default: return -1;
+        }
+    }
+    
     private void renderPanel(float x, float y, float width, float height, Shader shader, Vector3f color, boolean wireframe) {
         Matrix4f modelMatrix = new Matrix4f().identity()
             .translate(x + width/2, y + height/2, 0.0f)

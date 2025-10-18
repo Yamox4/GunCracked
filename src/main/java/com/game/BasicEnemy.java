@@ -6,7 +6,7 @@ public class BasicEnemy extends Enemy {
     private float hoverOffset;
     
     public BasicEnemy(Vector3f startPosition) {
-        super(startPosition, 100.0f, 2.0f, 0.8f);
+        super(startPosition, 1.0f, 2.0f, 0.8f); // Health set to 1
         this.color = new Vector3f(1.0f, 0.2f, 0.2f); // Red
         this.hoverOffset = 0.0f;
     }
