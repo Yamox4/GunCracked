@@ -7,28 +7,32 @@ import org.lwjgl.glfw.GLFWCursorPosCallback;
 
 public class Game {
 
-    private long window;
+    private final long window;
     private Shader shader;
     private Camera camera;
     private Cube cube;
     private Ground ground;
     private Matrix4f projectionMatrix;
 
-    private Vector3f cubePosition = new Vector3f(0, 2, 0);
-    private float cubeSpeed = 8.0f;
+    private Vector3f cubePosition = new Vector3f(0, 0, 0);
+    private final float cubeSpeed = 8.0f;
+    private final float hoverHeight = 1.5f; // Fixed hover height above ground
+    private float hoverOffset = 0.0f; // For subtle hovering animation
+    private float hoverTime = 0.0f;
 
     // Mouse input for camera
     private boolean firstMouse = true;
     private double lastX = 512.0;
     private double lastY = 384.0;
     private GLFWCursorPosCallback cursorPosCallback;
+    private org.lwjgl.glfw.GLFWScrollCallback scrollCallback;
 
     // Camera follow settings - IMPROVED VALUES
     private float cameraDistance = 10.0f;
-    private float cameraHeight = 2.0f;
+    private final float cameraHeight = 2.0f;
     private float cameraYaw = 0.0f;
     private float cameraPitch = 20.0f;  // Start looking down slightly
-    private float mouseSensitivity = 0.15f; // Reduced for smoother control
+    private final float mouseSensitivity = 0.15f; // Reduced for smoother control
 
     public Game(long window) {
         this.window = window;
@@ -45,6 +49,7 @@ public class Game {
 
         // Setup mouse input for camera control
         setupMouseInput();
+        setupScrollInput();
 
         // Capture the cursor for camera control
         GLFW.glfwSetInputMode(window, GLFW.GLFW_CURSOR, GLFW.GLFW_CURSOR_DISABLED);
@@ -87,6 +92,23 @@ public class Game {
         GLFW.glfwSetCursorPosCallback(window, cursorPosCallback);
     }
 
+    private void setupScrollInput() {
+        scrollCallback = new org.lwjgl.glfw.GLFWScrollCallback() {
+            @Override
+            public void invoke(long window, double xoffset, double yoffset) {
+                // Zoom in/out based on scroll direction
+                float zoomSpeed = 2.0f;
+                cameraDistance -= (float) yoffset * zoomSpeed;
+
+                // Constrain zoom limits
+                cameraDistance = Math.max(3.0f, Math.min(15.0f, cameraDistance));
+
+                updateCameraPosition();
+            }
+        };
+        GLFW.glfwSetScrollCallback(window, scrollCallback);
+    }
+
     private void updateCameraPosition() {
         // Calculate camera position using spherical coordinates - FIXED IMPLEMENTATION
         float yawRad = (float) Math.toRadians(cameraYaw);
@@ -109,26 +131,28 @@ public class Game {
     public void update() {
         float deltaTime = 0.016f; // ~60 FPS
 
+        // Update hover animation
+        hoverTime += deltaTime * 2.0f; // Speed of hover animation
+        hoverOffset = (float) Math.sin(hoverTime) * 0.1f; // Subtle up/down movement
+
         // Calculate movement directions based on camera yaw (horizontal rotation only)
         float yawRad = (float) Math.toRadians(cameraYaw);
-        
+
         // Forward direction (where camera is "looking" horizontally)
         Vector3f forward = new Vector3f(
-            (float) Math.sin(yawRad),  // X component
-            0.0f,                      // Y component (always 0 for horizontal movement)
-            (float) Math.cos(yawRad)   // Z component
+                (float) Math.sin(yawRad), // X component
+                0.0f, // Y component (always 0 for horizontal movement)
+                (float) Math.cos(yawRad) // Z component
         );
-        
+
         // Right direction (perpendicular to forward)
         Vector3f right = new Vector3f(
-            (float) Math.cos(yawRad),  // X component
-            0.0f,                      // Y component
-            -(float) Math.sin(yawRad)  // Z component
+                (float) Math.cos(yawRad), // X component
+                0.0f, // Y component
+                -(float) Math.sin(yawRad) // Z component
         );
-        
-        Vector3f up = new Vector3f(0, 1, 0);
 
-        // Cube movement controls - FIXED DIRECTIONS
+        // Cube movement controls - HORIZONTAL ONLY (Tron-style hovering player)
         Vector3f movement = new Vector3f();
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_W) == GLFW.GLFW_PRESS) {
             movement.sub(forward); // Move forward (into the screen from camera perspective)
@@ -142,32 +166,25 @@ public class Game {
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_D) == GLFW.GLFW_PRESS) {
             movement.add(right); // Move right
         }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_SPACE) == GLFW.GLFW_PRESS) {
-            movement.add(up); // Move up
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_LEFT_SHIFT) == GLFW.GLFW_PRESS) {
-            movement.sub(up); // Move down
-        }
 
-        // Apply movement to cube
+        // Apply horizontal movement only
         if (movement.length() > 0) {
             movement.normalize().mul(cubeSpeed * deltaTime);
-            cubePosition.add(movement);
+            // Only update X and Z coordinates (horizontal movement)
+            cubePosition.x += movement.x;
+            cubePosition.z += movement.z;
+            // Y coordinate is always fixed at hover height + animation offset
+            cubePosition.y = hoverHeight + hoverOffset;
 
             // Update camera to follow cube
             updateCameraPosition();
-        }
-
-        // Camera distance controls
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_Q) == GLFW.GLFW_PRESS) {
-            cameraDistance = Math.max(3.0f, cameraDistance - 5.0f * deltaTime);
-            updateCameraPosition();
-        }
-        if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_E) == GLFW.GLFW_PRESS) {
-            cameraDistance = Math.min(15.0f, cameraDistance + 5.0f * deltaTime);
+        } else {
+            // Even when not moving, update Y position for hover animation
+            cubePosition.y = hoverHeight + hoverOffset;
             updateCameraPosition();
         }
 
+        // Camera zoom is now handled by mouse scroll wheel
         // ESC to exit
         if (GLFW.glfwGetKey(window, GLFW.GLFW_KEY_ESCAPE) == GLFW.GLFW_PRESS) {
             GLFW.glfwSetWindowShouldClose(window, true);
@@ -195,17 +212,27 @@ public class Game {
         shader.setUniform("isWireframe", true);
         ground.render();
 
-        // Render cube (solid with lighting)
+        // Render hovering player cube with tron-style effects
+        // First render a slightly larger, dimmer "glow" effect
+        modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.1f);
+        mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
+        shader.setUniform("mvpMatrix", mvpMatrix);
+        shader.setUniform("modelMatrix", modelMatrix);
+        shader.setUniform("color", new Vector3f(0.2f, 0.6f, 1.0f)); // Dim blue glow
+        shader.setUniform("isWireframe", false);
+        cube.renderSolid();
+
+        // Render main cube (solid with lighting)
         modelMatrix = new Matrix4f().identity().translate(cubePosition);
         mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(1.0f, 0.5f, 0.0f)); // Orange
+        shader.setUniform("color", new Vector3f(0.3f, 0.8f, 1.0f)); // Bright cyan/blue
         shader.setUniform("isWireframe", false);
         cube.renderSolid();
 
-        // Render cube wireframe overlay
-        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 0.0f)); // Yellow wireframe
+        // Render cube wireframe overlay for tron aesthetic
+        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f)); // White wireframe
         shader.setUniform("isWireframe", true);
         cube.renderWireframe();
     }
@@ -218,6 +245,9 @@ public class Game {
         // Free callbacks
         if (cursorPosCallback != null) {
             cursorPosCallback.free();
+        }
+        if (scrollCallback != null) {
+            scrollCallback.free();
         }
     }
 }
