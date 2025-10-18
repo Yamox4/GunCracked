@@ -30,8 +30,8 @@ public class Game {
     private float jumpVelocity = 0.0f;
     private float jumpCooldownTimer = 0.0f;
     private final float jumpStrength = 10.0f;
-    private final float gravity = 15.0f;
-    private final float maxJumpHeight = 4.0f;
+    private final float gravity = 20.0f;
+    private final float maxJumpHeight = 2.0f;
     private final float jumpCooldown = 0.5f; // 0.5 second cooldown between jumps
 
     // Mouse input for camera
@@ -50,7 +50,7 @@ public class Game {
 
     // Dynamic FOV for movement feedback
     private final float baseFov = 60.0f; // Base field of view in degrees
-    private final float maxFovIncrease = 10.0f; // Maximum FOV increase when moving
+    private final float maxFovIncrease = 4.0f; // Subtle FOV increase when moving
     private float currentFov = 60.0f; // Current FOV value
     private final float fovZoomInSpeed = 100.0f; // Almost instant zoom when starting to move
     private final float fovZoomOutSpeed = 120.0f; // Almost instant zoom back when stopping
@@ -381,8 +381,12 @@ public class Game {
             isGrounded = true; // Player is on ground when not jumping
         }
 
-        // Update particle system
-        particleSystem.emitLightningParticles(cubePosition, isMoving, isJumping);
+        // Update particle system - always emit particles, with trail when moving
+        particleSystem.emitLightningParticles(cubePosition, true, isJumping); // Always emit
+        if (isMoving) {
+            // Add trail particles when moving
+            particleSystem.emitTrailParticles(cubePosition, movement, cubeSpeed);
+        }
         particleSystem.update(deltaTime);
 
         // Update enemy system
@@ -491,82 +495,22 @@ public class Game {
         shader.setUniform("isWireframe", true);
         ground.render();
 
-        // CLEAN TRON CUBE RENDERING - CONSISTENT COLORS AND SIZES
-        // Layer 1: Outer purple energy field (movement-reactive only)
-        if (isCurrentlyMoving || isJumping) {
-            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.4f);
-            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-            shader.setUniform("mvpMatrix", mvpMatrix);
-            shader.setUniform("modelMatrix", modelMatrix);
-            shader.setUniform("color", new Vector3f(0.4f, 0.1f, 0.6f)); // Consistent deep purple
-            shader.setUniform("isWireframe", false);
-            cube.renderSolid();
-        }
-
-        // Layer 2: Middle purple glow (movement only)
-        if (isCurrentlyMoving) {
-            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.25f);
-            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-            shader.setUniform("mvpMatrix", mvpMatrix);
-            shader.setUniform("modelMatrix", modelMatrix);
-            shader.setUniform("color", new Vector3f(0.6f, 0.2f, 0.8f)); // Consistent bright purple
-            shader.setUniform("isWireframe", false);
-            cube.renderSolid();
-        }
-
-        // Layer 3: Inner glow (consistent size)
-        modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.1f);
-        mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-        shader.setUniform("mvpMatrix", mvpMatrix);
-        shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.3f, 0.8f, 1.0f)); // Consistent cyan glow
-        shader.setUniform("isWireframe", false);
-        cube.renderSolid();
-
-        // Layer 4: Core cube (solid, consistent)
+        // SIMPLE CARTOONY YELLOW CUBE - NO SIZE CHANGES OR GLOW EFFECTS
+        // Render solid yellow cube
         modelMatrix = new Matrix4f().identity().translate(cubePosition);
         mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
         shader.setUniform("mvpMatrix", mvpMatrix);
         shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.5f, 0.9f, 1.0f)); // Consistent bright core
+        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 0.0f)); // Bright yellow
         shader.setUniform("isWireframe", false);
         cube.renderSolid();
 
-        // Layer 5: Primary wireframe (consistent white edges)
-        shader.setUniform("color", new Vector3f(1.0f, 1.0f, 1.0f)); // Consistent white edges
+        // Render black outline edges with thick lines
+        org.lwjgl.opengl.GL11.glLineWidth(4.0f); // Thick black edges
+        shader.setUniform("color", new Vector3f(0.0f, 0.0f, 0.0f)); // Black edges
         shader.setUniform("isWireframe", true);
         cube.renderWireframe();
-
-        // Layer 6: Secondary wireframe (consistent size and color)
-        modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.05f);
-        mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-        shader.setUniform("mvpMatrix", mvpMatrix);
-        shader.setUniform("modelMatrix", modelMatrix);
-        shader.setUniform("color", new Vector3f(0.4f, 0.8f, 1.0f)); // Consistent cyan edges
-        shader.setUniform("isWireframe", true);
-        cube.renderWireframe();
-
-        // Layer 7: Purple energy wireframe (movement-reactive, consistent)
-        if (isCurrentlyMoving) {
-            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.15f);
-            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-            shader.setUniform("mvpMatrix", mvpMatrix);
-            shader.setUniform("modelMatrix", modelMatrix);
-            shader.setUniform("color", new Vector3f(0.7f, 0.3f, 0.9f)); // Consistent purple energy
-            shader.setUniform("isWireframe", true);
-            cube.renderWireframe();
-        }
-
-        // Layer 8: Electric purple wireframe (jumping/moving, consistent)
-        if (isJumping || isCurrentlyMoving) {
-            modelMatrix = new Matrix4f().identity().translate(cubePosition).scale(1.3f);
-            mvpMatrix = new Matrix4f(projectionMatrix).mul(viewMatrix).mul(modelMatrix);
-            shader.setUniform("mvpMatrix", mvpMatrix);
-            shader.setUniform("modelMatrix", modelMatrix);
-            shader.setUniform("color", new Vector3f(0.9f, 0.5f, 1.0f)); // Consistent electric purple
-            shader.setUniform("isWireframe", true);
-            cube.renderWireframe();
-        }
+        org.lwjgl.opengl.GL11.glLineWidth(1.0f); // Reset line width
 
         // Render lightning particle effects
         particleSystem.render(shader, viewMatrix, projectionMatrix);

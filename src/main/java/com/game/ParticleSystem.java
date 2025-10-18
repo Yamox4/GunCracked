@@ -125,12 +125,10 @@ public class ParticleSystem {
             return;
         }
 
-        int particleCount = 0;
-        if (isMoving) {
-            particleCount += 8;
-        }
+        // Always emit base particles (constant glow)
+        int particleCount = 3; // Base constant particles
         if (isJumping) {
-            particleCount += 12;
+            particleCount += 8; // Extra particles when jumping
         }
 
         for (int i = 0; i < particleCount; i++) {
@@ -170,6 +168,50 @@ public class ParticleSystem {
             float size = 0.05f + random.nextFloat() * 0.1f;
 
             particles.add(new Particle(pos, vel, color, lifetime, size));
+        }
+    }
+    
+    public void emitTrailParticles(Vector3f cubePosition, Vector3f movement, float speed) {
+        if (particles.size() >= maxParticles) {
+            return;
+        }
+        
+        // Emit trail particles behind the cube when moving
+        int trailCount = 5; // Number of trail particles per frame
+        
+        for (int i = 0; i < trailCount; i++) {
+            // Position particles behind the cube based on movement direction
+            Vector3f moveDir = new Vector3f(movement).normalize();
+            Vector3f trailPos = new Vector3f(cubePosition);
+            
+            // Offset behind the cube in opposite direction of movement
+            trailPos.sub(moveDir.x * (0.5f + i * 0.2f), 
+                        moveDir.y * (0.5f + i * 0.2f), 
+                        moveDir.z * (0.5f + i * 0.2f));
+            
+            // Add some random spread
+            trailPos.add((random.nextFloat() - 0.5f) * 0.3f,
+                        (random.nextFloat() - 0.5f) * 0.3f,
+                        (random.nextFloat() - 0.5f) * 0.3f);
+            
+            // Trail particles move slower and fade quickly
+            Vector3f vel = new Vector3f(
+                (random.nextFloat() - 0.5f) * 2.0f,
+                (random.nextFloat() - 0.5f) * 2.0f,
+                (random.nextFloat() - 0.5f) * 2.0f
+            );
+            
+            // Yellow/orange trail colors to match cube
+            Vector3f color = new Vector3f(
+                1.0f, // Red
+                0.8f + random.nextFloat() * 0.2f, // Green (yellow to orange)
+                0.2f + random.nextFloat() * 0.3f  // Blue (slight orange tint)
+            );
+            
+            float lifetime = 0.3f + random.nextFloat() * 0.4f; // Shorter lifetime for trails
+            float size = 0.03f + random.nextFloat() * 0.05f; // Smaller trail particles
+            
+            particles.add(new Particle(trailPos, vel, color, lifetime, size));
         }
     }
 
