@@ -5,16 +5,29 @@ A mini 3D game built with Java and LWJGL featuring a floating cube with third-pe
 ## Features
 
 🎮 **Floating Cube Control** - Move your orange cube in 3D space  
-📷 **Third-Person Camera** - Smooth camera that follows the cube  
+📷 **Free-Look Camera** - Full 3D camera with mouse look and WASD movement  
+🔄 **Dual Control Modes** - Switch between camera mode and cube control with Tab  
 🌐 **Tron Aesthetics** - Glowing cyan grid ground with wireframe styling  
 💡 **Real-time Lighting** - Phong lighting model with ambient, diffuse, and specular components  
 🎨 **Dual Rendering** - Solid cube with wireframe overlay for that cyberpunk look  
 
 ## Controls
 
+### Camera Mode (Default)
+- **Mouse** - Look around (full 360° rotation)
+- **W/A/S/D** - Move camera forward/left/backward/right
+- **Space** - Move camera up
+- **Left Shift** - Move camera down
+- **Tab** - Switch to Cube Control Mode
+
+### Cube Control Mode
 - **W/A/S/D** - Move cube horizontally
 - **Space** - Move cube up
 - **Left Shift** - Move cube down
+- **Tab** - Switch back to Camera Mode
+
+### General
+- **ESC** - Exit game
 
 ## Requirements
 
