@@ -11,18 +11,24 @@ This project is set up with jMonkeyEngine 3.6.1-stable, the latest stable versio
 
 ### Windows
 ```cmd
-gradlew.bat run
+mvnw.cmd exec:java
 ```
 
 ### Linux/Mac
 ```bash
-./gradlew run
+./mvnw exec:java
 ```
 
 ## Building the Project
 
 ```cmd
-gradlew.bat build
+mvnw.cmd compile
+```
+
+## Downloading Dependencies
+
+```cmd
+mvnw.cmd dependency:resolve
 ```
 
 ## Project Structure
