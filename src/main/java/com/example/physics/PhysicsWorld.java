@@ -6,6 +6,7 @@ import java.util.Map;
 import com.jme3.app.Application;
 import com.jme3.app.state.BaseAppState;
 import com.jme3.bullet.PhysicsSpace;
+import com.jme3.bullet.collision.shapes.BoxCollisionShape;
 import com.jme3.bullet.collision.shapes.CollisionShape;
 import com.jme3.bullet.control.RigidBodyControl;
 import com.jme3.bullet.objects.PhysicsRigidBody;
@@ -78,7 +79,7 @@ public class PhysicsWorld extends BaseAppState {
      */
     public PhysicsRigidBody createPhysicsObject(String id, Spatial visual, CollisionShape shape,
             float mass, Vector3f position) {
-        
+
         // Set up visual
         if (visual != null) {
             visual.setLocalTranslation(position);
@@ -87,29 +88,29 @@ public class PhysicsWorld extends BaseAppState {
             RigidBodyControl control = new RigidBodyControl(shape, mass);
             control.setPhysicsLocation(position);
             visual.addControl(control);
-            
+
             // Add to physics world
             physicsEngine.getPhysicsSpace().add(control);
 
             // Attach to scene
             physicsNode.attachChild(visual);
             visualObjects.put(id, visual);
-            
+
             // Register with collision listener
             collisionListener.registerBody(id, control);
             physicsObjects.put(id, control);
-            
+
             return control;
         }
-        
+
         // If no visual, create physics-only body
         PhysicsRigidBody body = new PhysicsRigidBody(shape, mass);
         body.setPhysicsLocation(position);
         physicsEngine.getPhysicsSpace().add(body);
-        
+
         collisionListener.registerBody(id, body);
         physicsObjects.put(id, body);
-        
+
         return body;
     }
 
@@ -159,11 +160,77 @@ public class PhysicsWorld extends BaseAppState {
     }
 
     /**
-     * Create a ground plane
+     * Create a solid ground plane using RigidBodyControl for reliability
      */
     public PhysicsRigidBody createGroundPlane(String id, Spatial visual) {
-        CollisionShape shape = PhysicsShapeFactory.createGroundPlane();
-        return createPhysicsObject(id, visual, shape, 0, Vector3f.ZERO);
+        if (visual != null) {
+            // Position the visual at ground level
+            visual.setLocalTranslation(0, -1f, 0);
+
+            // Add RigidBodyControl with mass = 0 (static) - let it auto-generate collision shape
+            RigidBodyControl groundControl = new RigidBodyControl(0f);
+            visual.addControl(groundControl);
+
+            // Set physics location to match visual
+            groundControl.setPhysicsLocation(new Vector3f(0, -1f, 0));
+
+            // Add to physics space
+            physicsEngine.getPhysicsSpace().add(groundControl);
+
+            // Attach visual to scene
+            physicsNode.attachChild(visual);
+            visualObjects.put(id, visual);
+
+            // Register for collision detection
+            collisionListener.registerBody(id, groundControl);
+            physicsObjects.put(id, groundControl);
+
+            System.out.println("SOLID GROUND: Static box (auto-generated collision) at Y=-1");
+            System.out.println("Ground should now stop falling objects!");
+
+            return groundControl;
+        }
+
+        return null;
+    }
+
+    /**
+     * Create a solid ground plane with explicit collision shape (alternative
+     * method)
+     */
+    public PhysicsRigidBody createGroundPlaneExplicit(String id, Spatial visual, Vector3f halfExtents) {
+        if (visual != null) {
+            // Create explicit box collision shape
+            CollisionShape groundShape = new BoxCollisionShape(halfExtents);
+
+            // Position the visual at ground level
+            visual.setLocalTranslation(0, -halfExtents.y, 0);
+
+            // Add RigidBodyControl with explicit shape and mass = 0 (static)
+            RigidBodyControl groundControl = new RigidBodyControl(groundShape, 0f);
+            visual.addControl(groundControl);
+
+            // Set physics location to match visual
+            groundControl.setPhysicsLocation(new Vector3f(0, -halfExtents.y, 0));
+
+            // Add to physics space
+            physicsEngine.getPhysicsSpace().add(groundControl);
+
+            // Attach visual to scene
+            physicsNode.attachChild(visual);
+            visualObjects.put(id, visual);
+
+            // Register for collision detection
+            collisionListener.registerBody(id, groundControl);
+            physicsObjects.put(id, groundControl);
+
+            System.out.println("SOLID GROUND: Static box (" + (halfExtents.x * 2) + "x" + (halfExtents.y * 2) + "x" + (halfExtents.z * 2) + ") at Y=" + (-halfExtents.y));
+            System.out.println("Ground should now stop falling objects!");
+
+            return groundControl;
+        }
+
+        return null;
     }
 
     /**

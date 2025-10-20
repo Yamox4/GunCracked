@@ -85,53 +85,47 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
     }
     
     private void createScene() {
-        // Create larger, more visible ground
-        Geometry groundGeom = geometryFactory.createGroundPlane("Ground", 50f, GeometryFactory.Colors.LIGHT_GRAY);
+        // Create larger ground platform
+        Geometry groundGeom = geometryFactory.createGroundPlane("Ground", 100f, GeometryFactory.Colors.LIGHT_GRAY);
         PhysicsRigidBody groundBody = physicsWorld.createGroundPlane("ground", groundGeom);
         PhysicsMaterial.CONCRETE.applyTo(groundBody);
         
-        System.out.println("Created ground plane");
-        
-        // Create initial test objects
-        createTestSphere();
-        createTestBox();
-        createTestCapsule();
-        
-        System.out.println("Initial scene created with " + (objectCounter) + " objects");
+        System.out.println("Created large ground platform (100x100)");
+        System.out.println("Ready to spawn objects! Use SPACE, 1, or 2 keys.");
     }
     
     private void createTestSphere() {
+        Vector3f spawnPosition = getSpawnPositionFromCamera();
         String id = "sphere_" + (++objectCounter);
-        Vector3f position = new Vector3f(-2 + (float)Math.random() * 4, 8, (float)Math.random() * 4 - 2);
         
         Geometry sphereGeom = geometryFactory.createSphere(id, 0.5f, GeometryFactory.Colors.RED);
-        PhysicsRigidBody sphereBody = physicsWorld.createSphere(id, sphereGeom, 0.5f, 1f, position);
+        PhysicsRigidBody sphereBody = physicsWorld.createSphere(id, sphereGeom, 0.5f, 1f, spawnPosition);
         PhysicsMaterial.RUBBER.applyTo(sphereBody);
         
-        System.out.println("Created sphere at: " + position);
+        System.out.println("Spawned RED sphere at camera direction: " + spawnPosition);
     }
     
     private void createTestBox() {
+        Vector3f spawnPosition = getSpawnPositionFromCamera();
         String id = "box_" + (++objectCounter);
         Vector3f halfExtents = new Vector3f(0.5f, 0.5f, 0.5f);
-        Vector3f position = new Vector3f((float)Math.random() * 4 - 2, 8, (float)Math.random() * 4 - 2);
         
         Geometry boxGeom = geometryFactory.createBox(id, halfExtents, GeometryFactory.Colors.BLUE);
-        PhysicsRigidBody boxBody = physicsWorld.createBox(id, boxGeom, halfExtents, 2f, position);
+        PhysicsRigidBody boxBody = physicsWorld.createBox(id, boxGeom, halfExtents, 2f, spawnPosition);
         PhysicsMaterial.WOOD.applyTo(boxBody);
         
-        System.out.println("Created box at: " + position);
+        System.out.println("Spawned BLUE box at camera direction: " + spawnPosition);
     }
     
     private void createTestCapsule() {
+        Vector3f spawnPosition = getSpawnPositionFromCamera();
         String id = "capsule_" + (++objectCounter);
-        Vector3f position = new Vector3f((float)Math.random() * 4 - 2, 8, (float)Math.random() * 4 - 2);
         
         Geometry capsuleGeom = geometryFactory.createCapsule(id, 0.3f, 1.2f, GeometryFactory.Colors.GREEN);
-        PhysicsRigidBody capsuleBody = physicsWorld.createCapsule(id, capsuleGeom, 0.3f, 1.2f, 1.5f, position);
+        PhysicsRigidBody capsuleBody = physicsWorld.createCapsule(id, capsuleGeom, 0.3f, 1.2f, 1.5f, spawnPosition);
         PhysicsMaterial.METAL.applyTo(capsuleBody);
         
-        System.out.println("Created capsule at: " + position);
+        System.out.println("Spawned GREEN capsule at camera direction: " + spawnPosition);
     }
     
     private void setupFreeCamera() {
@@ -241,5 +235,20 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
                 // Ground found - could add visual indicator
             }
         }
+    }
+    
+    /**
+     * Get spawn position based on camera direction
+     */
+    private Vector3f getSpawnPositionFromCamera() {
+        // Get camera position and direction
+        Vector3f cameraPos = cam.getLocation();
+        Vector3f cameraDir = cam.getDirection();
+        
+        // Simple approach: spawn 5 units in front of camera, 3 units above ground
+        Vector3f spawnPos = cameraPos.add(cameraDir.mult(5f));
+        spawnPos.y = Math.max(spawnPos.y, 3f); // Ensure at least 3 units above ground
+        
+        return spawnPos;
     }
 }
