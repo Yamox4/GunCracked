@@ -46,7 +46,9 @@ public class PhysicsWorld extends BaseAppState {
         physicsEngine.getPhysicsSpace().addCollisionListener(collisionListener);
 
         // Attach physics node to root
-        ((Node) app.getViewPort().getScenes().get(0)).attachChild(physicsNode);
+        if (app instanceof com.jme3.app.SimpleApplication) {
+            ((com.jme3.app.SimpleApplication) app).getRootNode().attachChild(physicsNode);
+        }
     }
 
     @Override
@@ -76,31 +78,38 @@ public class PhysicsWorld extends BaseAppState {
      */
     public PhysicsRigidBody createPhysicsObject(String id, Spatial visual, CollisionShape shape,
             float mass, Vector3f position) {
-        // Create physics body
-        PhysicsRigidBody body = new PhysicsRigidBody(shape, mass);
-        body.setPhysicsLocation(position);
-
-        // Add to physics world
-        physicsEngine.getPhysicsSpace().add(body);
-
+        
         // Set up visual
         if (visual != null) {
             visual.setLocalTranslation(position);
 
             // Add rigid body control to sync physics with visual
             RigidBodyControl control = new RigidBodyControl(shape, mass);
+            control.setPhysicsLocation(position);
             visual.addControl(control);
+            
+            // Add to physics world
             physicsEngine.getPhysicsSpace().add(control);
 
             // Attach to scene
             physicsNode.attachChild(visual);
             visualObjects.put(id, visual);
+            
+            // Register with collision listener
+            collisionListener.registerBody(id, control);
+            physicsObjects.put(id, control);
+            
+            return control;
         }
-
-        // Register with collision listener
+        
+        // If no visual, create physics-only body
+        PhysicsRigidBody body = new PhysicsRigidBody(shape, mass);
+        body.setPhysicsLocation(position);
+        physicsEngine.getPhysicsSpace().add(body);
+        
         collisionListener.registerBody(id, body);
         physicsObjects.put(id, body);
-
+        
         return body;
     }
 

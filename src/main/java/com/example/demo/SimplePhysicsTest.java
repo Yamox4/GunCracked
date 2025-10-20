@@ -7,8 +7,10 @@ import com.example.rendering.GeometryFactory;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.objects.PhysicsRigidBody;
 import com.jme3.input.KeyInput;
+import com.jme3.input.MouseInput;
 import com.jme3.input.controls.ActionListener;
 import com.jme3.input.controls.KeyTrigger;
+import com.jme3.input.controls.MouseAxisTrigger;
 import com.jme3.light.AmbientLight;
 import com.jme3.light.DirectionalLight;
 import com.jme3.math.ColorRGBA;
@@ -25,6 +27,7 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
     private RaycastHelper raycastHelper;
     private int objectCounter = 0;
     private boolean sceneInitialized = false;
+    private float cameraSpeed = 10f;
     
     public static void main(String[] args) {
         SimplePhysicsTest app = new SimplePhysicsTest();
@@ -43,6 +46,9 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
         // Setup lighting
         setupLighting();
         
+        // Setup free fly camera
+        setupFreeCamera();
+        
         // Note: raycastHelper and scene creation will be done in simpleUpdate after physics is ready
         
         // Setup input
@@ -58,53 +64,86 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
         System.out.println("1 - Spawn box");
         System.out.println("2 - Spawn capsule");
         System.out.println("R - Reset scene");
+        System.out.println("WASD - Move camera");
+        System.out.println("Mouse - Look around");
+        System.out.println("Mouse wheel - Change camera speed");
     }
     
     private void setupLighting() {
-        // Ambient light
+        // Brighter ambient light
         AmbientLight ambient = new AmbientLight();
-        ambient.setColor(ColorRGBA.White.mult(0.3f));
+        ambient.setColor(ColorRGBA.White.mult(0.6f));
         rootNode.addLight(ambient);
         
-        // Directional light
+        // Stronger directional light
         DirectionalLight sun = new DirectionalLight();
         sun.setDirection(new Vector3f(-0.5f, -1f, -0.5f).normalizeLocal());
-        sun.setColor(ColorRGBA.White.mult(0.8f));
+        sun.setColor(ColorRGBA.White.mult(1.2f));
         rootNode.addLight(sun);
+        
+        System.out.println("Lighting setup complete");
     }
     
     private void createScene() {
-        // Create ground
-        Geometry groundGeom = geometryFactory.createGroundPlane("Ground", 20f, GeometryFactory.Colors.GRAY);
+        // Create larger, more visible ground
+        Geometry groundGeom = geometryFactory.createGroundPlane("Ground", 50f, GeometryFactory.Colors.LIGHT_GRAY);
         PhysicsRigidBody groundBody = physicsWorld.createGroundPlane("ground", groundGeom);
         PhysicsMaterial.CONCRETE.applyTo(groundBody);
+        
+        System.out.println("Created ground plane");
         
         // Create initial test objects
         createTestSphere();
         createTestBox();
         createTestCapsule();
+        
+        System.out.println("Initial scene created with " + (objectCounter) + " objects");
     }
     
     private void createTestSphere() {
         String id = "sphere_" + (++objectCounter);
+        Vector3f position = new Vector3f(-2 + (float)Math.random() * 4, 8, (float)Math.random() * 4 - 2);
+        
         Geometry sphereGeom = geometryFactory.createSphere(id, 0.5f, GeometryFactory.Colors.RED);
-        PhysicsRigidBody sphereBody = physicsWorld.createSphere(id, sphereGeom, 0.5f, 1f, new Vector3f(-2, 5, 0));
+        PhysicsRigidBody sphereBody = physicsWorld.createSphere(id, sphereGeom, 0.5f, 1f, position);
         PhysicsMaterial.RUBBER.applyTo(sphereBody);
+        
+        System.out.println("Created sphere at: " + position);
     }
     
     private void createTestBox() {
         String id = "box_" + (++objectCounter);
         Vector3f halfExtents = new Vector3f(0.5f, 0.5f, 0.5f);
+        Vector3f position = new Vector3f((float)Math.random() * 4 - 2, 8, (float)Math.random() * 4 - 2);
+        
         Geometry boxGeom = geometryFactory.createBox(id, halfExtents, GeometryFactory.Colors.BLUE);
-        PhysicsRigidBody boxBody = physicsWorld.createBox(id, boxGeom, halfExtents, 2f, new Vector3f(0, 5, 0));
+        PhysicsRigidBody boxBody = physicsWorld.createBox(id, boxGeom, halfExtents, 2f, position);
         PhysicsMaterial.WOOD.applyTo(boxBody);
+        
+        System.out.println("Created box at: " + position);
     }
     
     private void createTestCapsule() {
         String id = "capsule_" + (++objectCounter);
+        Vector3f position = new Vector3f((float)Math.random() * 4 - 2, 8, (float)Math.random() * 4 - 2);
+        
         Geometry capsuleGeom = geometryFactory.createCapsule(id, 0.3f, 1.2f, GeometryFactory.Colors.GREEN);
-        PhysicsRigidBody capsuleBody = physicsWorld.createCapsule(id, capsuleGeom, 0.3f, 1.2f, 1.5f, new Vector3f(2, 5, 0));
+        PhysicsRigidBody capsuleBody = physicsWorld.createCapsule(id, capsuleGeom, 0.3f, 1.2f, 1.5f, position);
         PhysicsMaterial.METAL.applyTo(capsuleBody);
+        
+        System.out.println("Created capsule at: " + position);
+    }
+    
+    private void setupFreeCamera() {
+        // Enable free fly camera
+        flyCam.setEnabled(true);
+        flyCam.setMoveSpeed(cameraSpeed);
+        flyCam.setRotationSpeed(2f);
+        
+        System.out.println("Free fly camera enabled!");
+        System.out.println("- WASD: Move camera");
+        System.out.println("- Mouse: Look around");
+        System.out.println("- Mouse wheel: Change speed");
     }
     
     private void setupInput() {
@@ -113,7 +152,12 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
         inputManager.addMapping("SpawnCapsule", new KeyTrigger(KeyInput.KEY_2));
         inputManager.addMapping("Reset", new KeyTrigger(KeyInput.KEY_R));
         
+        // Add mouse wheel for speed control
+        inputManager.addMapping("SpeedUp", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
+        inputManager.addMapping("SpeedDown", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
+        
         inputManager.addListener(this, "SpawnSphere", "SpawnBox", "SpawnCapsule", "Reset");
+        inputManager.addListener(this, "SpeedUp", "SpeedDown");
     }
     
     @Override
@@ -137,7 +181,28 @@ public class SimplePhysicsTest extends SimpleApplication implements ActionListen
                 resetScene();
                 System.out.println("Scene reset");
                 break;
+            case "SpeedUp":
+                changeCameraSpeed(1.5f);
+                break;
+            case "SpeedDown":
+                changeCameraSpeed(0.75f);
+                break;
         }
+    }
+    
+    /**
+     * Change camera movement speed
+     */
+    private void changeCameraSpeed(float multiplier) {
+        cameraSpeed *= multiplier;
+        
+        // Clamp speed between reasonable limits
+        cameraSpeed = Math.max(1f, Math.min(100f, cameraSpeed));
+        
+        // Update fly camera speed
+        flyCam.setMoveSpeed(cameraSpeed);
+        
+        System.out.println(String.format("Camera speed: %.1f", cameraSpeed));
     }
     
     private void resetScene() {
