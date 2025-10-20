@@ -111,11 +111,11 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.example.Main</mainClass>
-                    <options>
-                        <option>-Xms512m</option>
-                        <option>-Xmx1024m</option>
-                    </options>
+                    <mainClass>com.example.modules.ModuleTest</mainClass>
+                    <args>
+                        <arg>-Xms512m</arg>
+                        <arg>-Xmx1024m</arg>
+                    </args>
                 </configuration>
             </plugin>
         </plugins>
