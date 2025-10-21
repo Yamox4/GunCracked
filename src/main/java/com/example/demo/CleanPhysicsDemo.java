@@ -1,6 +1,6 @@
 package com.example.demo;
 
-import com.example.rendering.GeometryFactory;
+import com.example.ui.UIManager;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
 import com.jme3.bullet.collision.shapes.BoxCollisionShape;
@@ -28,16 +28,12 @@ import com.jme3.system.AppSettings;
 /**
  * Clean physics demo with realistic shading - empty level, 3 spawn buttons only
  */
-public class CleanPhysicsDemo extends SimpleApplication implements ActionListener {
+public class CleanPhysicsDemo extends SimpleApplication implements ActionListener, UIManager.UIActionListener {
 
     private BulletAppState bulletAppState;
-    private GeometryFactory geometryFactory;
+    private UIManager uiManager;
     private int objectCounter = 0;
     private float cameraSpeed = 10f;
-
-    // Graphics mode toggle
-    private boolean realisticMode = true;
-    private boolean uiMode = false;
 
     // Lighting
     private DirectionalLight sunLight;
@@ -65,12 +61,16 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
 
     @Override
     public void simpleInitApp() {
+        // Disable default ESC key behavior (prevents dialog and auto-close)
+        inputManager.deleteMapping(SimpleApplication.INPUT_MAPPING_EXIT);
+
         // Initialize physics
         bulletAppState = new BulletAppState();
         stateManager.attach(bulletAppState);
 
-        // Initialize geometry factory
-        geometryFactory = new GeometryFactory(assetManager);
+        // Initialize UI Manager
+        uiManager = new UIManager(this);
+        stateManager.attach(uiManager);
 
         // Setup realistic lighting
         setupRealisticLighting();
@@ -322,70 +322,67 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         System.out.println("Scene reset - all spawned objects removed");
     }
 
-    /**
-     * Generate a random bright color
-     */
-    private ColorRGBA getRandomColor() {
-        // Generate bright, saturated colors
-        float hue = (float) Math.random(); // 0-1 for full hue range
-        float saturation = 0.7f + (float) Math.random() * 0.3f; // 0.7-1.0 for vibrant colors
-        float brightness = 0.8f + (float) Math.random() * 0.2f; // 0.8-1.0 for bright colors
-
-        // Convert HSB to RGB
-        int rgb = java.awt.Color.HSBtoRGB(hue, saturation, brightness);
-        float r = ((rgb >> 16) & 0xFF) / 255f;
-        float g = ((rgb >> 8) & 0xFF) / 255f;
-        float b = (rgb & 0xFF) / 255f;
-
-        return new ColorRGBA(r, g, b, 1.0f);
-    }
-
-    /**
-     * Get a random color name for display
-     */
-    private String getColorName(ColorRGBA color) {
-        // Simple color name approximation based on RGB values
-        if (color.r > 0.8f && color.g < 0.3f && color.b < 0.3f) {
-            return "RED";
-        }
-        if (color.g > 0.8f && color.r < 0.3f && color.b < 0.3f) {
-            return "GREEN";
-        }
-        if (color.b > 0.8f && color.r < 0.3f && color.g < 0.3f) {
-            return "BLUE";
-        }
-        if (color.r > 0.8f && color.g > 0.8f && color.b < 0.3f) {
-            return "YELLOW";
-        }
-        if (color.r > 0.8f && color.b > 0.8f && color.g < 0.3f) {
-            return "MAGENTA";
-        }
-        if (color.g > 0.8f && color.b > 0.8f && color.r < 0.3f) {
-            return "CYAN";
-        }
-        if (color.r > 0.7f && color.g > 0.4f && color.b < 0.3f) {
-            return "ORANGE";
-        }
-        if (color.r > 0.6f && color.g < 0.4f && color.b > 0.6f) {
-            return "PURPLE";
-        }
-        if (color.r > 0.8f && color.g > 0.6f && color.b > 0.6f) {
-            return "PINK";
-        }
-        return "COLORFUL";
-    }
-
     private void printControls() {
         System.out.println("\n=== CLEAN PHYSICS DEMO - 3 SHAPES ONLY ===");
         System.out.println("1 - Spawn METALLIC RED SPHERE");
         System.out.println("2 - Spawn METALLIC BLUE BOX");
         System.out.println("3 - Spawn METALLIC GREEN CYLINDER");
         System.out.println("R - Reset scene (remove all objects)");
+        System.out.println("H - Toggle UI visibility");
+        System.out.println("ESC - Toggle mouse lock/unlock");
         System.out.println("WASD - Move camera");
         System.out.println("Mouse - Look around");
         System.out.println("Mouse wheel - Change camera speed");
         System.out.println("==========================================");
         System.out.println("Level starts EMPTY - only spawn what you want!");
+        System.out.println("UI Menu buttons are visible on screen!");
         System.out.println("==========================================\n");
+    }
+
+    // UI Action Listener implementations
+    @Override
+    public void onSpawnSphere() {
+        Vector3f spawnPos = getSpawnPosition();
+        spawnSphere(spawnPos);
+        updateUIStats();
+    }
+
+    @Override
+    public void onSpawnBox() {
+        Vector3f spawnPos = getSpawnPosition();
+        spawnBox(spawnPos);
+        updateUIStats();
+    }
+
+    @Override
+    public void onSpawnCapsule() {
+        Vector3f spawnPos = getSpawnPosition();
+        spawnCapsule(spawnPos);
+        updateUIStats();
+    }
+
+    @Override
+    public void onResetScene() {
+        resetScene();
+        updateUIStats();
+    }
+
+    @Override
+    public void onToggleUI() {
+        System.out.println("UI visibility toggled");
+    }
+
+
+
+    @Override
+    public void onCloseApp() {
+        System.out.println("Closing application...");
+        stop();
+    }
+
+    private void updateUIStats() {
+        if (uiManager != null) {
+            uiManager.updateObjectCount(objectCounter);
+        }
     }
 }

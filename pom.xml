@@ -91,6 +91,26 @@
             <version>${jme.version}</version>
         </dependency>
 
+        <!-- Lemur UI Library -->
+        <dependency>
+            <groupId>com.simsilica</groupId>
+            <artifactId>lemur</artifactId>
+            <version>1.16.0</version>
+        </dependency>
+
+        <!-- Lemur Proto (additional UI components) -->
+        <dependency>
+            <groupId>com.simsilica</groupId>
+            <artifactId>lemur-proto</artifactId>
+            <version>1.13.0</version>
+        </dependency>
+
+        <!-- Groovy for Lemur styling -->
+        <dependency>
+            <groupId>org.apache.groovy</groupId>
+            <artifactId>groovy</artifactId>
+            <version>4.0.15</version>
+        </dependency>
 
     </dependencies>
 
@@ -112,10 +132,6 @@
                 <version>3.1.0</version>
                 <configuration>
                     <mainClass>com.example.demo.CleanPhysicsDemo</mainClass>
-                    <args>
-                        <arg>-Xms512m</arg>
-                        <arg>-Xmx1024m</arg>
-                    </args>
                 </configuration>
             </plugin>
         </plugins>

@@ -1,207 +1,270 @@
 package com.example.ui;
 
-import java.util.ArrayList;
-import java.util.List;
-
 import com.jme3.app.Application;
 import com.jme3.app.SimpleApplication;
 import com.jme3.app.state.BaseAppState;
-import com.jme3.asset.AssetManager;
-import com.jme3.font.BitmapFont;
-import com.jme3.math.Vector3f;
-import com.jme3.scene.Node;
-import com.jme3.system.AppSettings;
+import com.jme3.input.KeyInput;
+import com.jme3.input.controls.ActionListener;
+import com.jme3.input.controls.KeyTrigger;
+import com.jme3.math.ColorRGBA;
+
+import com.simsilica.lemur.*;
+import com.simsilica.lemur.component.QuadBackgroundComponent;
 
 /**
- * Modular UI Manager for creating and managing UI elements
+ * UI Manager using Lemur for physics demo - handles all UI elements including menu buttons
  */
-public class UIManager extends BaseAppState {
+public class UIManager extends BaseAppState implements ActionListener {
     
-    private Node guiNode;
-    private AssetManager assetManager;
-    private BitmapFont guiFont;
-    private AppSettings settings;
+    // Button actions interface
+    public interface UIActionListener {
+        void onSpawnSphere();
+        void onSpawnBox();
+        void onSpawnCapsule();
+        void onResetScene();
+        void onToggleUI();
+        void onCloseApp();
+    }
     
-    private List<UIPanel> panels;
-    private List<UIButton> buttons;
-    private List<UILabel> labels;
+    private final UIActionListener actionListener;
     
-    public UIManager() {
-        this.panels = new ArrayList<>();
-        this.buttons = new ArrayList<>();
-        this.labels = new ArrayList<>();
+    // UI Elements
+    private Container mainPanel;
+    private Container buttonPanel;
+    private Label titleLabel;
+    private Label instructionsLabel;
+    private Label statsLabel;
+    private Button sphereButton;
+    private Button boxButton;
+    private Button capsuleButton;
+    private Button resetButton;
+    private Button closeButton;
+    
+    // UI State
+    private boolean showUI = true;
+    private boolean mouseLocked = true;
+    
+    public UIManager(UIActionListener listener) {
+        this.actionListener = listener;
     }
     
     @Override
     protected void initialize(Application app) {
-        if (app instanceof SimpleApplication) {
-            this.guiNode = ((SimpleApplication) app).getGuiNode();
-        }
-        this.assetManager = app.getAssetManager();
-        this.settings = app.getContext().getSettings();
+        // Initialize Lemur without styles
+        GuiGlobals.initialize(app);
         
-        // Load default font
-        this.guiFont = assetManager.loadFont("Interface/Fonts/Default.fnt");
+        createUIElements();
+        setupInputMappings(app);
+        
+        System.out.println("Lemur UI Manager initialized successfully");
+    }
+    
+    private void createUIElements() {
+        // Main container for all UI elements
+        mainPanel = new Container();
+        
+        // Title
+        titleLabel = new Label("Physics Demo - 3 Shapes");
+        titleLabel.setFontSize(24);
+        titleLabel.setColor(ColorRGBA.White);
+        
+        // Instructions
+        instructionsLabel = new Label("Controls:\n" +
+                "1 - Spawn Red Sphere\n" +
+                "2 - Spawn Blue Box\n" +
+                "3 - Spawn Green Cylinder\n" +
+                "R - Reset Scene\n" +
+                "H - Toggle UI\n" +
+                "ESC - Toggle Mouse Lock\n" +
+                "WASD - Move Camera\n" +
+                "Mouse - Look Around");
+        instructionsLabel.setFontSize(12);
+        instructionsLabel.setColor(ColorRGBA.Yellow);
+        
+        // Stats
+        statsLabel = new Label("Objects: 0");
+        statsLabel.setFontSize(16);
+        statsLabel.setColor(ColorRGBA.Green);
+        
+        // Create button panel
+        createButtonPanel();
+        
+        // Position UI elements
+        positionUIElements();
+        
+        // Attach to GUI node
+        ((SimpleApplication) getApplication()).getGuiNode().attachChild(mainPanel);
+        ((SimpleApplication) getApplication()).getGuiNode().attachChild(buttonPanel);
+    }
+    
+    private void createButtonPanel() {
+        buttonPanel = new Container();
+        
+        // Create buttons with proper styling
+        sphereButton = new Button("Spawn Sphere");
+        sphereButton.setFontSize(14);
+        sphereButton.setColor(ColorRGBA.White);
+        sphereButton.setBackground(new QuadBackgroundComponent(ColorRGBA.Red.mult(0.8f)));
+        sphereButton.addClickCommands(source -> {
+            if (actionListener != null) {
+                actionListener.onSpawnSphere();
+            }
+        });
+        
+        boxButton = new Button("Spawn Box");
+        boxButton.setFontSize(14);
+        boxButton.setColor(ColorRGBA.White);
+        boxButton.setBackground(new QuadBackgroundComponent(ColorRGBA.Blue.mult(0.8f)));
+        boxButton.addClickCommands(source -> {
+            if (actionListener != null) {
+                actionListener.onSpawnBox();
+            }
+        });
+        
+        capsuleButton = new Button("Spawn Cylinder");
+        capsuleButton.setFontSize(14);
+        capsuleButton.setColor(ColorRGBA.White);
+        capsuleButton.setBackground(new QuadBackgroundComponent(ColorRGBA.Green.mult(0.8f)));
+        capsuleButton.addClickCommands(source -> {
+            if (actionListener != null) {
+                actionListener.onSpawnCapsule();
+            }
+        });
+        
+        resetButton = new Button("Reset Scene");
+        resetButton.setFontSize(14);
+        resetButton.setColor(ColorRGBA.White);
+        resetButton.setBackground(new QuadBackgroundComponent(ColorRGBA.Orange.mult(0.8f)));
+        resetButton.addClickCommands(source -> {
+            if (actionListener != null) {
+                actionListener.onResetScene();
+            }
+        });
+        
+        closeButton = new Button("✕ Close");
+        closeButton.setFontSize(14);
+        closeButton.setColor(ColorRGBA.White);
+        closeButton.setBackground(new QuadBackgroundComponent(ColorRGBA.Red.mult(0.9f)));
+        closeButton.addClickCommands(source -> {
+            if (actionListener != null) {
+                actionListener.onCloseApp();
+            }
+        });
+        
+        // Add buttons to panel
+        buttonPanel.addChild(sphereButton);
+        buttonPanel.addChild(boxButton);
+        buttonPanel.addChild(capsuleButton);
+        buttonPanel.addChild(resetButton);
+        buttonPanel.addChild(closeButton);
+    }
+    
+    private void positionUIElements() {
+        // Position main info panel (top-left)
+        mainPanel.addChild(titleLabel);
+        mainPanel.addChild(instructionsLabel);
+        mainPanel.addChild(statsLabel);
+        
+        mainPanel.setLocalTranslation(10, getApplication().getCamera().getHeight() - 10, 0);
+        
+        // Position button panel (top-right)
+        float buttonPanelX = getApplication().getCamera().getWidth() - 150;
+        float buttonPanelY = getApplication().getCamera().getHeight() - 50;
+        buttonPanel.setLocalTranslation(buttonPanelX, buttonPanelY, 0);
+    }
+    
+    private void setupInputMappings(Application app) {
+        // UI toggle
+        app.getInputManager().addMapping("ToggleUI", new KeyTrigger(KeyInput.KEY_H));
+        app.getInputManager().addListener(this, "ToggleUI");
+        
+        // Mouse lock toggle (ESC key) - handled in UI module
+        app.getInputManager().addMapping("ToggleMouseLock", new KeyTrigger(KeyInput.KEY_ESCAPE));
+        app.getInputManager().addListener(this, "ToggleMouseLock");
+    }
+    
+    @Override
+    public void onAction(String name, boolean isPressed, float tpf) {
+        if (!isPressed) return;
+        
+        if ("ToggleUI".equals(name)) {
+            toggleUI();
+        } else if ("ToggleMouseLock".equals(name)) {
+            toggleMouseLock();
+        }
+    }
+    
+    public void toggleUI() {
+        showUI = !showUI;
+        
+        if (showUI) {
+            ((SimpleApplication) getApplication()).getGuiNode().attachChild(mainPanel);
+            ((SimpleApplication) getApplication()).getGuiNode().attachChild(buttonPanel);
+        } else {
+            mainPanel.removeFromParent();
+            buttonPanel.removeFromParent();
+        }
+        
+        if (actionListener != null) {
+            actionListener.onToggleUI();
+        }
+        
+        System.out.println("UI visibility toggled: " + showUI);
+    }
+    
+    public void updateObjectCount(int count) {
+        if (statsLabel != null) {
+            statsLabel.setText("Objects: " + count);
+        }
+    }
+    
+    public void showMessage(String message) {
+        // Just print to console instead of creating UI elements that cause threading issues
+        System.out.println("UI Message: " + message);
+    }
+    
+    private void toggleMouseLock() {
+        SimpleApplication app = (SimpleApplication) getApplication();
+        mouseLocked = !mouseLocked;
+        
+        if (mouseLocked) {
+            app.getInputManager().setCursorVisible(false);
+            app.getFlyByCamera().setEnabled(true);
+            System.out.println("Mouse locked - camera control enabled");
+        } else {
+            app.getInputManager().setCursorVisible(true);
+            app.getFlyByCamera().setEnabled(false);
+            System.out.println("Mouse unlocked - UI interaction enabled");
+        }
     }
     
     @Override
     protected void cleanup(Application app) {
-        clearAll();
+        // Cleanup UI elements
+        if (mainPanel != null) {
+            mainPanel.removeFromParent();
+        }
+        if (buttonPanel != null) {
+            buttonPanel.removeFromParent();
+        }
+        
+        System.out.println("UI Manager cleaned up");
     }
     
     @Override
     protected void onEnable() {
-        // UI Manager enabled
+        // UI is enabled by default
     }
     
     @Override
     protected void onDisable() {
-        // UI Manager disabled
+        // Hide all UI elements when disabled
+        if (showUI) {
+            toggleUI();
+        }
     }
     
-    /**
-     * Create a UI panel
-     */
-    public UIPanel createPanel(String id, float x, float y, float width, float height) {
-        UIPanel panel = new UIPanel(id, x, y, width, height, assetManager);
-        panels.add(panel);
-        guiNode.attachChild(panel.getNode());
-        return panel;
-    }
-    
-    /**
-     * Create a UI button
-     */
-    public UIButton createButton(String id, String text, float x, float y, float width, float height) {
-        UIButton button = new UIButton(id, text, x, y, width, height, assetManager, guiFont);
-        buttons.add(button);
-        guiNode.attachChild(button.getNode());
-        return button;
-    }
-    
-    /**
-     * Create a UI label
-     */
-    public UILabel createLabel(String id, String text, float x, float y) {
-        UILabel label = new UILabel(id, text, x, y, guiFont);
-        labels.add(label);
-        guiNode.attachChild(label.getNode());
-        return label;
-    }
-    
-    /**
-     * Create a control panel with multiple buttons
-     */
-    public UIControlPanel createControlPanel(String id, float x, float y, float width) {
-        UIControlPanel controlPanel = new UIControlPanel(id, x, y, width, assetManager, guiFont);
-        guiNode.attachChild(controlPanel.getNode());
-        return controlPanel;
-    }
-    
-    /**
-     * Create an info panel for displaying statistics
-     */
-    public UIInfoPanel createInfoPanel(String id, float x, float y, float width, float height) {
-        UIInfoPanel infoPanel = new UIInfoPanel(id, x, y, width, height, assetManager, guiFont);
-        guiNode.attachChild(infoPanel.getNode());
-        return infoPanel;
-    }
-    
-    /**
-     * Remove a panel by ID
-     */
-    public void removePanel(String id) {
-        panels.removeIf(panel -> {
-            if (panel.getId().equals(id)) {
-                panel.getNode().removeFromParent();
-                return true;
-            }
-            return false;
-        });
-    }
-    
-    /**
-     * Remove a button by ID
-     */
-    public void removeButton(String id) {
-        buttons.removeIf(button -> {
-            if (button.getId().equals(id)) {
-                button.getNode().removeFromParent();
-                return true;
-            }
-            return false;
-        });
-    }
-    
-    /**
-     * Remove a label by ID
-     */
-    public void removeLabel(String id) {
-        labels.removeIf(label -> {
-            if (label.getId().equals(id)) {
-                label.getNode().removeFromParent();
-                return true;
-            }
-            return false;
-        });
-    }
-    
-    /**
-     * Get panel by ID
-     */
-    public UIPanel getPanel(String id) {
-        return panels.stream()
-                .filter(panel -> panel.getId().equals(id))
-                .findFirst()
-                .orElse(null);
-    }
-    
-    /**
-     * Get button by ID
-     */
-    public UIButton getButton(String id) {
-        return buttons.stream()
-                .filter(button -> button.getId().equals(id))
-                .findFirst()
-                .orElse(null);
-    }
-    
-    /**
-     * Get label by ID
-     */
-    public UILabel getLabel(String id) {
-        return labels.stream()
-                .filter(label -> label.getId().equals(id))
-                .findFirst()
-                .orElse(null);
-    }
-    
-    /**
-     * Clear all UI elements
-     */
-    public void clearAll() {
-        panels.forEach(panel -> panel.getNode().removeFromParent());
-        buttons.forEach(button -> button.getNode().removeFromParent());
-        labels.forEach(label -> label.getNode().removeFromParent());
-        
-        panels.clear();
-        buttons.clear();
-        labels.clear();
-    }
-    
-    /**
-     * Get screen dimensions
-     */
-    public Vector3f getScreenSize() {
-        return new Vector3f(settings.getWidth(), settings.getHeight(), 0);
-    }
-    
-    /**
-     * Create a heads-up display
-     */
-    public UIHUD createHUD() {
-        UIHUD hud = new UIHUD(assetManager, guiFont, settings);
-        guiNode.attachChild(hud.getNode());
-        return hud;
+    public boolean isUIVisible() {
+        return showUI;
     }
 }
