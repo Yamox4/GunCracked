@@ -283,9 +283,9 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         capsule.setLocalTranslation(position);
         rootNode.attachChild(capsule);
 
-        // Add physics - use cylinder collision to match the visual
-        com.jme3.bullet.collision.shapes.CylinderCollisionShape capsuleShape
-                = new com.jme3.bullet.collision.shapes.CylinderCollisionShape(new Vector3f(0.4f, 0.6f, 0.4f));
+        // Add physics - use box collision that exactly matches cylinder dimensions
+        // Visual cylinder: radius=0.4, height=1.2 -> Box: half-extents(0.4, 0.6, 0.4)
+        BoxCollisionShape capsuleShape = new BoxCollisionShape(new Vector3f(0.4f, 0.6f, 0.4f));
         RigidBodyControl capsulePhysics = new RigidBodyControl(capsuleShape, 1.5f);
         capsule.addControl(capsulePhysics);
         bulletAppState.getPhysicsSpace().add(capsulePhysics);
