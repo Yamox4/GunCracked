@@ -111,7 +111,7 @@
                 <artifactId>exec-maven-plugin</artifactId>
                 <version>3.1.0</version>
                 <configuration>
-                    <mainClass>com.example.demo.SimplePhysicsTest</mainClass>
+                    <mainClass>com.example.demo.CleanPhysicsDemo</mainClass>
                     <args>
                         <arg>-Xms512m</arg>
                         <arg>-Xmx1024m</arg>
