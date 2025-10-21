@@ -372,8 +372,6 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         System.out.println("UI visibility toggled");
     }
 
-
-
     @Override
     public void onCloseApp() {
         System.out.println("Closing application...");
