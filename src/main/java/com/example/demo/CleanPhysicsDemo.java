@@ -49,7 +49,7 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
 
         AppSettings settings = new AppSettings(true);
         settings.setTitle("Clean Physics Demo - 3 Shapes Only");
-        settings.setResolution(1280, 720);
+        settings.setResolution(1400, 720);
         settings.setVSync(true);
         settings.setSamples(4);
         settings.setFrameRate(60);
@@ -61,6 +61,9 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
 
     @Override
     public void simpleInitApp() {
+        // FIRST THING: Hide cursor immediately
+        inputManager.setCursorVisible(false);
+
         // Disable default ESC key behavior (prevents dialog and auto-close)
         inputManager.deleteMapping(SimpleApplication.INPUT_MAPPING_EXIT);
 
@@ -376,6 +379,16 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
     public void onCloseApp() {
         System.out.println("Closing application...");
         stop();
+    }
+
+    @Override
+    public void simpleUpdate(float tpf) {
+        super.simpleUpdate(tpf);
+
+        // Force cursor to be hidden on first few frames to override any default behavior
+        if (timer.getTimeInSeconds() < 1.0f) {
+            inputManager.setCursorVisible(false);
+        }
     }
 
     private void updateUIStats() {

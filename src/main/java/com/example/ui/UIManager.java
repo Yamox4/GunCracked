@@ -223,6 +223,8 @@ public class UIManager extends BaseAppState implements ActionListener {
         System.out.println("UI Message: " + message);
     }
     
+
+    
     private void toggleMouseLock() {
         SimpleApplication app = (SimpleApplication) getApplication();
         mouseLocked = !mouseLocked;
