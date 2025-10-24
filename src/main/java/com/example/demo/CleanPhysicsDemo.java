@@ -1,5 +1,6 @@
 package com.example.demo;
 
+import com.example.entity.EntityManager;
 import com.example.ui.UIManager;
 import com.jme3.app.SimpleApplication;
 import com.jme3.bullet.BulletAppState;
@@ -32,6 +33,7 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
 
     private BulletAppState bulletAppState;
     private UIManager uiManager;
+    private EntityManager entityManager;
     private int objectCounter = 0;
     private float cameraSpeed = 10f;
 
@@ -71,6 +73,10 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         bulletAppState = new BulletAppState();
         stateManager.attach(bulletAppState);
 
+        // Initialize Entity Manager
+        entityManager = new EntityManager();
+        stateManager.attach(entityManager);
+        
         // Initialize UI Manager
         uiManager = new UIManager(this);
         stateManager.attach(uiManager);
@@ -175,7 +181,7 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         inputManager.addMapping("SpawnBox", new KeyTrigger(KeyInput.KEY_2));
         inputManager.addMapping("SpawnCapsule", new KeyTrigger(KeyInput.KEY_3));
 
-        // Camera speed control
+        // Camera speed control (only for free camera mode)
         inputManager.addMapping("SpeedUp", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, false));
         inputManager.addMapping("SpeedDown", new MouseAxisTrigger(MouseInput.AXIS_WHEEL, true));
 
@@ -339,6 +345,7 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
         System.out.println("==========================================");
         System.out.println("Level starts EMPTY - only spawn what you want!");
         System.out.println("UI Menu buttons are visible on screen!");
+        System.out.println("Free camera mode only - no FPS mode");
         System.out.println("==========================================\n");
     }
 
@@ -376,6 +383,11 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
     }
 
     @Override
+    public void onToggleCameraMode() {
+        System.out.println("Camera mode toggle not implemented - using free camera only");
+    }
+    
+    @Override
     public void onCloseApp() {
         System.out.println("Closing application...");
         stop();
@@ -390,6 +402,7 @@ public class CleanPhysicsDemo extends SimpleApplication implements ActionListene
             inputManager.setCursorVisible(false);
         }
     }
+
 
     private void updateUIStats() {
         if (uiManager != null) {
